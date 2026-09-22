@@ -1,0 +1,11 @@
+{
+  "description": "Web-based mobile walkthrough prototype for TapServe, an AI-assisted household service matching platform.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  },
+  "title": "TapServe Mobile Walkthrough"
+}
