@@ -357,7 +357,7 @@ export function BookingCompletedScreen({
             {/* Header Stamp */}
             <div className="flex items-center justify-between pb-3 border-b border-[#e2e8f0]">
               <div className="flex items-center gap-2">
-                <img src="/assets/tapserve_logo.png" className="size-8 object-contain" alt="TapServe" />
+                <img src={`${A}tapserve_logo.png`} className="size-8 object-contain" alt="TapServe" />
                 <div className="flex flex-col">
                   <span className="text-[#0f766e] text-xs font-bold">TapServe Receipt</span>
                   <span className="text-[#94a3b8] text-[9px] font-mono">San Pablo City, Laguna</span>

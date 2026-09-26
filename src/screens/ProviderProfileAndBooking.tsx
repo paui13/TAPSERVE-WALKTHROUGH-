@@ -238,6 +238,8 @@ export function BookingScreen({
     provider.services[0] || "General Repair"
   );
   const [selectedDate, setSelectedDate] = useState("Today, Oct 12");
+  const [calYear, setCalYear] = useState(2026);
+  const [calMonth, setCalMonth] = useState(9); // 9 = October (0-indexed)
   const [selectedSlot, setSelectedSlot] = useState("10:30 AM");
   const [selectedAddressId, setSelectedAddressId] = useState(
     addresses.find((a) => a.isDefault)?.id || addresses[0]?.id || ""
@@ -252,13 +254,85 @@ export function BookingScreen({
   const [conflictSlotTime, setConflictSlotTime] = useState("");
   const [confirming, setConfirming] = useState(false);
 
-  // Available slots for selected date
-  const dateSlots = provider.availableSlots[selectedDate] || [
-    "9:00 AM",
-    "10:30 AM",
-    "2:00 PM",
-    "3:30 PM",
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
+
+  const handlePrevMonth = () => {
+    if (calYear === 2026 && calMonth <= 9) return;
+    if (calMonth === 0) {
+      setCalMonth(11);
+      setCalYear((y) => y - 1);
+    } else {
+      setCalMonth((m) => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (calMonth === 11) {
+      setCalMonth(0);
+      setCalYear((y) => y + 1);
+    } else {
+      setCalMonth((m) => m + 1);
+    }
+  };
+
+  // Check if provider is available on the currently selected date
+  const isSelectedDateWorkingDay = (() => {
+    if (selectedDate.startsWith("Today")) {
+      return provider.workingDays.some((w) => w.toLowerCase() === "monday");
+    }
+    if (selectedDate.startsWith("Tomorrow")) {
+      return provider.workingDays.some((w) => w.toLowerCase() === "tuesday");
+    }
+    const prefix = selectedDate.split(",")[0]?.trim().toLowerCase();
+    const dayMap: Record<string, string> = {
+      sun: "sunday",
+      mon: "monday",
+      tue: "tuesday",
+      wed: "wednesday",
+      thu: "thursday",
+      fri: "friday",
+      sat: "saturday",
+    };
+    const fullDay = dayMap[prefix || ""];
+    if (!fullDay) return true;
+    return provider.workingDays.some((w) => w.toLowerCase() === fullDay);
+  })();
+
+  // Available slots for selected date
+  const dateSlots = !isSelectedDateWorkingDay
+    ? []
+    : provider.availableSlots[selectedDate] || [
+        "9:00 AM",
+        "10:30 AM",
+        "2:00 PM",
+        "3:30 PM",
+      ];
+
+  const handleSelectDate = (dateKey: string) => {
+    setSelectedDate(dateKey);
+    const slots = provider.availableSlots[dateKey] || [
+      "9:00 AM",
+      "10:30 AM",
+      "2:00 PM",
+      "3:30 PM",
+    ];
+    if (slots.length > 0 && !slots.includes(selectedSlot)) {
+      setSelectedSlot(slots[0]);
+    }
+  };
 
   // Helper: check if a slot is already booked for this provider on this date
   const isSlotBooked = (timeStr: string) => {
@@ -371,55 +445,245 @@ export function BookingScreen({
             </div>
           </div>
 
-          {/* Select Date */}
-          <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col gap-2.5 shadow-xs">
-            <label className="text-[#0f172a] text-xs font-bold uppercase tracking-wider">
-              Select Date
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {["Today, Oct 12", "Tomorrow, Oct 13", "Wed, Oct 14"].map((d) => (
+          {/* Select Date - Interactive Calendar View */}
+          <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col gap-3 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-[#0f172a] text-xs font-bold uppercase tracking-wider block">
+                  Select Date
+                </label>
+                <span className="text-[#64748b] text-[11px]">
+                  Pick an appointment date from the calendar
+                </span>
+              </div>
+              <div className="bg-[#f0fdfa] border border-[#ccfbf1] text-[#0f766e] text-xs font-bold px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-2xs">
+                <span>📅</span>
+                <span>{selectedDate}</span>
+              </div>
+            </div>
+
+            {/* Quick Date Presets */}
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+              {[
+                { label: "Today (Oct 12)", val: "Today, Oct 12", m: 9, y: 2026 },
+                { label: "Tomorrow (Oct 13)", val: "Tomorrow, Oct 13", m: 9, y: 2026 },
+                { label: "Wed, Oct 14", val: "Wed, Oct 14", m: 9, y: 2026 },
+                { label: "Thu, Oct 15", val: "Thu, Oct 15", m: 9, y: 2026 },
+              ].map((p) => (
                 <button
-                  key={d}
+                  key={p.val}
                   type="button"
-                  onClick={() => setSelectedDate(d)}
-                  className={`p-2.5 rounded-xl border text-xs font-semibold text-center touch-manipulation transition-all ${
-                    selectedDate === d
-                      ? "bg-[#0d9488] border-[#0d9488] text-white"
-                      : "bg-[#f8fafc] border-[#e2e8f0] text-[#475569]"
+                  onClick={() => {
+                    handleSelectDate(p.val);
+                    setCalMonth(p.m);
+                    setCalYear(p.y);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-semibold whitespace-nowrap transition-all touch-manipulation ${
+                    selectedDate === p.val
+                      ? "bg-[#0d9488] border-[#0d9488] text-white shadow-xs"
+                      : "bg-[#f8fafc] border-[#e2e8f0] text-[#475569] hover:border-[#0d9488]"
                   }`}
                 >
-                  {d}
+                  {p.label}
                 </button>
               ))}
             </div>
 
-            {/* Time Slots */}
-            <div className="flex flex-col gap-1.5 pt-2">
-              <span className="text-[#64748b] text-[11px] font-semibold">
-                Available Time Slots
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {dateSlots.map((slot) => {
-                  const booked = isSlotBooked(slot);
-                  const isSelected = selectedSlot === slot && !booked;
+            {/* Monthly Calendar View */}
+            <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-3 flex flex-col gap-2">
+              {/* Month Header & Controls */}
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[#0f172a] text-xs font-bold tracking-tight">
+                  {monthNames[calMonth]} {calYear}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={handlePrevMonth}
+                    disabled={calYear === 2026 && calMonth <= 9}
+                    className="size-7 rounded-lg flex items-center justify-center border border-[#e2e8f0] bg-white text-[#475569] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-100 transition-colors text-xs font-bold"
+                    aria-label="Previous Month"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNextMonth}
+                    className="size-7 rounded-lg flex items-center justify-center border border-[#e2e8f0] bg-white text-[#475569] hover:bg-slate-100 transition-colors text-xs font-bold"
+                    aria-label="Next Month"
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
+
+              {/* Weekday Names Header */}
+              <div className="grid grid-cols-7 text-center">
+                {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((dName) => (
+                  <span
+                    key={dName}
+                    className="text-[10px] font-bold text-[#94a3b8] py-0.5 uppercase tracking-wide"
+                  >
+                    {dName}
+                  </span>
+                ))}
+              </div>
+
+              {/* Days Grid */}
+              <div className="grid grid-cols-7 gap-1">
+                {/* Empty cells for offset */}
+                {Array.from({
+                  length: new Date(calYear, calMonth, 1).getDay(),
+                }).map((_, i) => (
+                  <div key={`empty-${i}`} className="h-8" />
+                ))}
+
+                {/* Day numbers */}
+                {Array.from({
+                  length: new Date(calYear, calMonth + 1, 0).getDate(),
+                }).map((_, i) => {
+                  const dayNum = i + 1;
+                  const dayDate = new Date(calYear, calMonth, dayNum);
+                  const isPast = dayDate < new Date(2026, 9, 12);
+                  const isToday = calYear === 2026 && calMonth === 9 && dayNum === 12;
+                  const isTomorrow = calYear === 2026 && calMonth === 9 && dayNum === 13;
+                  const dayOfWeekName = dayDate.toLocaleDateString("en-US", { weekday: "long" });
+                  const dayOfWeekShort = dayDate.toLocaleDateString("en-US", { weekday: "short" });
+                  const monthShort = dayDate.toLocaleDateString("en-US", { month: "short" });
+
+                  let dateKey = `${dayOfWeekShort}, ${monthShort} ${dayNum}`;
+                  if (isToday) dateKey = `Today, ${monthShort} ${dayNum}`;
+                  else if (isTomorrow) dateKey = `Tomorrow, ${monthShort} ${dayNum}`;
+
+                  const isWorkingDay = provider.workingDays.some(
+                    (w) => w.toLowerCase() === dayOfWeekName.toLowerCase()
+                  );
+                  const isSelected = selectedDate === dateKey;
+
+                  if (isPast) {
+                    return (
+                      <button
+                        key={dayNum}
+                        type="button"
+                        disabled
+                        className="h-8 w-full rounded-lg text-slate-300 text-[11px] font-medium cursor-not-allowed flex items-center justify-center"
+                      >
+                        {dayNum}
+                      </button>
+                    );
+                  }
+
+                  if (!isWorkingDay) {
+                    return (
+                      <button
+                        key={dayNum}
+                        type="button"
+                        onClick={() =>
+                          onToast(`${provider.name} is off on ${dayOfWeekName}s. Please pick an active day.`)
+                        }
+                        title={`Day Off (${dayOfWeekName})`}
+                        className="h-8 w-full rounded-lg text-slate-400 bg-slate-200/50 text-[11px] flex flex-col items-center justify-center hover:bg-slate-200/80 transition-colors touch-manipulation"
+                      >
+                        <span className="line-through text-[10px] leading-none opacity-60">
+                          {dayNum}
+                        </span>
+                        <span className="text-[7px] text-slate-400 font-bold -mt-0.5 leading-none">
+                          Off
+                        </span>
+                      </button>
+                    );
+                  }
+
+                  if (isSelected) {
+                    return (
+                      <button
+                        key={dayNum}
+                        type="button"
+                        className="h-8 w-full rounded-lg bg-[#0d9488] text-white font-bold text-xs shadow-xs flex flex-col items-center justify-center scale-105 transition-all touch-manipulation"
+                      >
+                        <span className="leading-none">{dayNum}</span>
+                        {isToday && (
+                          <span className="size-1 rounded-full bg-white mt-0.5" />
+                        )}
+                      </button>
+                    );
+                  }
+
                   return (
                     <button
-                      key={slot}
+                      key={dayNum}
                       type="button"
-                      onClick={() => handleSelectSlot(slot)}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all touch-manipulation ${
-                        booked
-                          ? "bg-slate-100 border-slate-200 text-slate-400 line-through cursor-not-allowed"
-                          : isSelected
-                          ? "bg-[#0d9488] border-[#0d9488] text-white"
-                          : "bg-[#f8fafc] border-[#e2e8f0] text-[#0f172a] hover:border-[#0d9488]"
-                      }`}
+                      onClick={() => handleSelectDate(dateKey)}
+                      className="h-8 w-full rounded-lg bg-white border border-[#e2e8f0] text-[#0f172a] hover:border-[#0d9488] hover:text-[#0d9488] font-semibold text-[11px] transition-all flex flex-col items-center justify-center active:scale-95 touch-manipulation"
                     >
-                      {booked ? `${slot} (Booked)` : slot}
+                      <span className="leading-none">{dayNum}</span>
+                      {isToday && (
+                        <span className="size-1 rounded-full bg-[#0d9488] mt-0.5" />
+                      )}
                     </button>
                   );
                 })}
               </div>
+
+              {/* Calendar Legend */}
+              <div className="flex items-center justify-between pt-1.5 border-t border-[#e2e8f0] text-[10px] text-[#64748b]">
+                <div className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-[#0d9488]" />
+                  <span>Selected</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-sm bg-white border border-[#e2e8f0]" />
+                  <span>Available</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-sm bg-slate-200" />
+                  <span>Day Off / Past</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Time Slots Section */}
+            <div className="flex flex-col gap-1.5 pt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[#64748b] text-[11px] font-semibold">
+                  Available Time Slots for <span className="text-[#0f172a] font-bold">{selectedDate}</span>
+                </span>
+                {provider.workingHours && (
+                  <span className="text-[#94a3b8] text-[10px]">
+                    Hours: {provider.workingHours}
+                  </span>
+                )}
+              </div>
+
+              {!isSelectedDateWorkingDay ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center text-xs text-amber-800 flex items-center justify-center gap-2">
+                  <span>⚠️</span>
+                  <span>{provider.name} has a scheduled Day Off on this date. Please pick an active day above.</span>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {dateSlots.map((slot) => {
+                    const booked = isSlotBooked(slot);
+                    const isSelected = selectedSlot === slot && !booked;
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => handleSelectSlot(slot)}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all touch-manipulation ${
+                          booked
+                            ? "bg-slate-100 border-slate-200 text-slate-400 line-through cursor-not-allowed"
+                            : isSelected
+                            ? "bg-[#0d9488] border-[#0d9488] text-white shadow-xs"
+                            : "bg-[#f8fafc] border-[#e2e8f0] text-[#0f172a] hover:border-[#0d9488]"
+                        }`}
+                      >
+                        {booked ? `${slot} (Booked)` : slot}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 

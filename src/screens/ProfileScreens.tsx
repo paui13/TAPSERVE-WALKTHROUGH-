@@ -1355,7 +1355,7 @@ export function HelpSupportScreen({
 
         {/* Official Brand Footer */}
         <div className="flex flex-col items-center justify-center py-6 gap-2 opacity-85">
-          <img src="/assets/tapserve_logo.png" className="size-16 object-contain" alt="TapServe" />
+          <img src={`${A}tapserve_logo.png`} className="size-16 object-contain" alt="TapServe" />
           <div className="text-center">
             <p className="text-xs font-bold text-[#0f766e]">TapServe Philippines</p>
             <p className="text-[10px] text-[#94a3b8]">One Tap. All Services. Better Living. • v1.0</p>

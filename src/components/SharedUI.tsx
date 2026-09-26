@@ -1,7 +1,7 @@
 import React from "react";
 import { Screen } from "../types";
 
-export const A = "/assets/";
+export const A = `${import.meta.env.BASE_URL}assets/`;
 
 // ─── TapServe Official Logo ───────────────────────────────────────────────────
 export function TapServeLogo({
@@ -13,7 +13,7 @@ export function TapServeLogo({
 }) {
   return (
     <img
-      src="/assets/tapserve_logo.png"
+      src={`${A}tapserve_logo.png`}
       alt="TapServe"
       style={{ width: size, height: size }}
       className={`object-contain shrink-0 ${className}`}
@@ -31,7 +31,7 @@ export function TapServeIcon({
 }) {
   return (
     <img
-      src="/assets/tapserve_icon.png"
+      src={`${A}tapserve_icon.png`}
       alt="TapServe"
       style={{ width: size, height: size }}
       className={`object-contain shrink-0 ${className}`}
@@ -50,7 +50,7 @@ export function TappyAvatar({
 }) {
   return (
     <img
-      src="/assets/tappy_mascot.png"
+      src={`${A}tappy_mascot.png`}
       alt="Tappy — TapServe AI Assistant"
       style={{ width: size, height: size }}
       className={`rounded-full object-contain shrink-0 drop-shadow-xs ${className}`}
@@ -68,7 +68,7 @@ export function TappyIcon({
 }) {
   return (
     <img
-      src="/assets/tappy_mascot.png"
+      src={`${A}tappy_mascot.png`}
       alt="Tappy — TapServe AI Assistant"
       style={{ width: size, height: size }}
       className={`rounded-full object-contain shrink-0 drop-shadow-xs ${className}`}
@@ -333,19 +333,17 @@ export function FloatingAIButton({ onClick }: { onClick: () => void }) {
     <div className="absolute bottom-[72px] right-3 z-30">
       <button
         onClick={onClick}
-        className="bg-[#0f766e] hover:bg-[#115e59] drop-shadow-[0px_6px_20px_rgba(15,118,110,0.45)] flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-full active:scale-95 transition-all touch-manipulation border-2 border-white/90 shadow-lg cursor-pointer"
+        className="bg-[#0f766e] hover:bg-[#115e59] drop-shadow-[0px_6px_20px_rgba(15,118,110,0.45)] flex items-center justify-center size-12 rounded-full active:scale-95 transition-all touch-manipulation border-2 border-white/90 shadow-lg cursor-pointer p-1"
         aria-label="Tappy — TapServe AI Assistant"
+        title="TapServe AI Assistant"
       >
-        <div className="size-7 rounded-full bg-white/25 p-0.5 flex items-center justify-center shrink-0 border border-white/60 overflow-hidden">
+        <div className="size-full rounded-full bg-white/25 p-1 flex items-center justify-center shrink-0 border border-white/60 overflow-hidden">
           <img
-            src="/assets/tappy_mascot.png"
+            src={`${A}tappy_mascot.png`}
             className="size-full object-contain rounded-full"
             alt="Tappy"
           />
         </div>
-        <span className="text-white text-xs font-bold tracking-tight whitespace-nowrap">
-          Tappy — TapServe AI Assistant
-        </span>
       </button>
     </div>
   );

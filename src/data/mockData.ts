@@ -1,7 +1,7 @@
 // ─── TapServe Capstone Demo Data & Persistence Store ──────────────────────────
 // Household services platform in San Pablo City, Laguna
 
-const A = "/assets/";
+const A = `${import.meta.env.BASE_URL}assets/`;
 
 export interface ServiceCategory {
   id: string;

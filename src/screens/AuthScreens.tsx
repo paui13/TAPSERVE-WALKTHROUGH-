@@ -361,7 +361,7 @@ export function LoginScreen({
                 }}
                 className="bg-white border border-[#e2e8f0] hover:border-[#cbd5e1] flex flex-1 gap-2.5 h-11 items-center justify-center rounded-xl active:bg-gray-50 touch-manipulation text-xs font-bold text-[#0f172a] shadow-xs transition-all cursor-pointer"
               >
-                <img src="/assets/google_logo.jpg" className="size-5 rounded-full object-cover shrink-0" alt="Google" />
+                <img src={`${A}google_logo.jpg`} className="size-5 rounded-full object-cover shrink-0" alt="Google" />
                 Google
               </button>
               <button
@@ -373,7 +373,7 @@ export function LoginScreen({
                 }}
                 className="bg-white border border-[#e2e8f0] hover:border-[#cbd5e1] flex flex-1 gap-2.5 h-11 items-center justify-center rounded-xl active:bg-gray-50 touch-manipulation text-xs font-bold text-[#0f172a] shadow-xs transition-all cursor-pointer"
               >
-                <img src="/assets/fb_logo.png" className="size-5 rounded-sm object-contain shrink-0" alt="Facebook" />
+                <img src={`${A}fb_logo.png`} className="size-5 rounded-sm object-contain shrink-0" alt="Facebook" />
                 Facebook
               </button>
             </div>
@@ -482,7 +482,7 @@ export function LoginScreen({
                 }}
                 className="bg-white border border-[#e2e8f0] hover:border-[#cbd5e1] flex flex-1 gap-2.5 h-11 items-center justify-center rounded-xl active:bg-gray-50 touch-manipulation text-xs font-bold text-[#0f172a] shadow-xs transition-all cursor-pointer"
               >
-                <img src="/assets/google_logo.jpg" className="size-5 rounded-full object-cover shrink-0" alt="Google" />
+                <img src={`${A}google_logo.jpg`} className="size-5 rounded-full object-cover shrink-0" alt="Google" />
                 Google
               </button>
               <button
@@ -496,7 +496,7 @@ export function LoginScreen({
                 }}
                 className="bg-white border border-[#e2e8f0] hover:border-[#cbd5e1] flex flex-1 gap-2.5 h-11 items-center justify-center rounded-xl active:bg-gray-50 touch-manipulation text-xs font-bold text-[#0f172a] shadow-xs transition-all cursor-pointer"
               >
-                <img src="/assets/fb_logo.png" className="size-5 rounded-sm object-contain shrink-0" alt="Facebook" />
+                <img src={`${A}fb_logo.png`} className="size-5 rounded-sm object-contain shrink-0" alt="Facebook" />
                 Facebook
               </button>
             </div>
