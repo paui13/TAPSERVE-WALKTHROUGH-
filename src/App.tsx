@@ -67,12 +67,31 @@ import {
 } from "./screens/ProviderModeScreens";
 
 import { ChatbotScreen } from "./screens/ChatbotScreen";
+import { AdminPortal } from "./screens/AdminPortal";
 
 export default function App() {
   // Navigation state
   const [currentScreen, setCurrentScreen] = useState<Screen>("splash");
   const [history, setHistory] = useState<Screen[]>([]);
   const [animClass, setAnimClass] = useState("fade-in");
+
+  // View mode toggle: "mobile" app or "admin" web portal
+  const [viewMode, setViewMode] = useState<"mobile" | "admin">(() => {
+    return (
+      (localStorage.getItem("tapserve_view_mode") as "mobile" | "admin") ||
+      "mobile"
+    );
+  });
+
+  const handleToggleViewMode = (mode: "mobile" | "admin") => {
+    setViewMode(mode);
+    localStorage.setItem("tapserve_view_mode", mode);
+    showToast(
+      mode === "admin"
+        ? "Switched to TapServe Admin Web Portal"
+        : "Switched to TapServe Mobile App"
+    );
+  };
 
   // Global persistent data states
   const [currentUser, setCurrentUser] = useState<UserAccount>(() =>
@@ -739,10 +758,50 @@ export default function App() {
     }
   };
 
+  // Render Admin Web Portal if selected
+  if (viewMode === "admin") {
+    return (
+      <div className="relative w-screen h-screen overflow-hidden">
+        <AdminPortal
+          onSwitchToMobile={() => handleToggleViewMode("mobile")}
+          onToast={showToast}
+        />
+        {/* Global Toast Overlay */}
+        {toast && (
+          <div className="fixed top-4 right-4 z-[200] flex justify-center pointer-events-none">
+            <div className="bg-[#0f172a] text-white px-4 py-2.5 rounded-2xl shadow-xl scale-in text-center border border-white/10">
+              <span className="text-xs font-semibold">{toast}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Render Mobile Application View
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center sm:p-4 select-none">
+    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center sm:p-4 select-none relative">
+      {/* Top Floating View Switcher Bar */}
+      <div className="fixed top-3 z-50 flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/80 shadow-2xl">
+        <span className="text-[11px] font-semibold text-slate-400 mr-1">View:</span>
+        <button
+          onClick={() => handleToggleViewMode("mobile")}
+          className="px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 bg-[#0d9488] text-white shadow-xs cursor-pointer"
+        >
+          <span>📱</span>
+          <span>Mobile App</span>
+        </button>
+        <button
+          onClick={() => handleToggleViewMode("admin")}
+          className="px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer"
+        >
+          <span>💻</span>
+          <span>Admin Web Portal</span>
+        </button>
+      </div>
+
       {/* Mobile Shell */}
-      <div className="relative w-full max-w-[400px] h-screen sm:h-[844px] overflow-hidden bg-[#f8fafc] sm:rounded-[40px] shadow-2xl sm:border-[8px] sm:border-slate-800 flex flex-col">
+      <div className="relative w-full max-w-[400px] h-screen sm:h-[844px] overflow-hidden bg-[#f8fafc] sm:rounded-[40px] shadow-2xl sm:border-[8px] sm:border-slate-800 flex flex-col mt-7 sm:mt-8">
         {/* Dynamic Screen Component with Animation */}
         <div key={currentScreen} className={`size-full flex flex-col ${animClass}`}>
           {renderScreen()}
@@ -762,8 +821,15 @@ export default function App() {
       <div className="hidden sm:flex items-center gap-3 mt-3 px-4 py-1.5 bg-slate-800/80 rounded-full border border-slate-700 text-xs text-slate-300">
         <span className="font-semibold text-slate-400">Capstone Demo Tools:</span>
         <button
+          onClick={() => handleToggleViewMode("admin")}
+          className="text-[#5eead4] hover:underline font-bold flex items-center gap-1"
+        >
+          <span>💻</span> Switch to Admin Web
+        </button>
+        <span className="text-slate-600">|</span>
+        <button
           onClick={() => setShowResetConfirm(true)}
-          className="text-[#5eead4] hover:underline font-bold"
+          className="text-slate-300 hover:text-white"
         >
           Reset Demo Data
         </button>
