@@ -205,93 +205,124 @@ export function BottomNav({
 }
 
 // ─── Provider Bottom Navigation ───────────────────────────────────────────────
+// ─── Provider Bottom Navigation (Redesigned 5-Tab Marketplace Bar) ───────────
 export function ProviderBottomNav({
   active,
   nav,
   requestCount = 0,
+  unreadMessagesCount = 0,
+  onSelectTab,
 }: {
-  active: string;
-  nav: (s: Screen) => void;
+  active: "home" | "jobs" | "bookings" | "messages" | "profile" | string;
+  nav?: (s: Screen) => void;
   requestCount?: number;
+  unreadMessagesCount?: number;
+  onSelectTab?: (tab: "home" | "jobs" | "bookings" | "messages" | "profile") => void;
 }) {
   const tabs = [
     {
-      id: "dashboard",
-      label: "Dashboard",
+      id: "home",
+      label: "Home",
+      match: ["home", "dashboard"],
       screen: "provider-dashboard" as Screen,
       icon: (a: boolean) => (
         <svg
-          className={`size-5 ${a ? "text-[#0d9488]" : "text-[#94a3b8]"}`}
-          fill="none"
+          className={`size-5 transition-colors ${a ? "text-[#115E59]" : "text-[#6B7280]"}`}
+          fill={a ? "currentColor" : "none"}
           viewBox="0 0 24 24"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={a ? 1.5 : 2}
         >
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+          />
         </svg>
       ),
     },
     {
-      id: "requests",
-      label: "Requests",
+      id: "jobs",
+      label: "Jobs",
+      match: ["jobs", "requests", "provider-booking-request"],
       screen: "provider-booking-request" as Screen,
       badge: requestCount > 0 ? requestCount : undefined,
       icon: (a: boolean) => (
         <svg
-          className={`size-5 ${a ? "text-[#0d9488]" : "text-[#94a3b8]"}`}
-          fill="none"
+          className={`size-5 transition-colors ${a ? "text-[#115E59]" : "text-[#6B7280]"}`}
+          fill={a ? "currentColor" : "none"}
           viewBox="0 0 24 24"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={a ? 1.5 : 2}
         >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"
+            d="M20 7h-4V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM10 5h4v2h-4V5zm10 14H4V9h16v10z"
           />
         </svg>
       ),
     },
     {
-      id: "availability",
-      label: "Availability",
+      id: "bookings",
+      label: "Bookings",
+      match: ["bookings", "availability", "schedule", "provider-availability"],
       screen: "provider-availability" as Screen,
       icon: (a: boolean) => (
         <svg
-          className={`size-5 ${a ? "text-[#0d9488]" : "text-[#94a3b8]"}`}
-          fill="none"
+          className={`size-5 transition-colors ${a ? "text-[#115E59]" : "text-[#6B7280]"}`}
+          fill={a ? "currentColor" : "none"}
           viewBox="0 0 24 24"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={a ? 1.5 : 2}
         >
-          <rect x="3" y="4" width="18" height="18" rx="2" />
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            d="M16 2v4M8 2v4M3 10h18"
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
           />
         </svg>
       ),
     },
     {
-      id: "reviews",
-      label: "Reviews",
-      screen: "provider-reviews" as Screen,
+      id: "messages",
+      label: "Messages",
+      match: ["messages", "chat", "messaging"],
+      screen: "messaging" as Screen,
+      badge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined,
       icon: (a: boolean) => (
         <svg
-          className={`size-5 ${a ? "text-[#0d9488]" : "text-[#94a3b8]"}`}
-          fill="none"
+          className={`size-5 transition-colors ${a ? "text-[#115E59]" : "text-[#6B7280]"}`}
+          fill={a ? "currentColor" : "none"}
           viewBox="0 0 24 24"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={a ? 1.5 : 2}
         >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 0 0 .95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 0 0-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 0 0-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 0 0-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 0 0 .951-.69l1.519-4.674z"
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "profile",
+      label: "Profile",
+      match: ["profile", "reviews", "provider-reviews", "provider-services"],
+      screen: "provider-dashboard" as Screen,
+      icon: (a: boolean) => (
+        <svg
+          className={`size-5 transition-colors ${a ? "text-[#115E59]" : "text-[#6B7280]"}`}
+          fill={a ? "currentColor" : "none"}
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={a ? 1.5 : 2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
           />
         </svg>
       ),
@@ -299,30 +330,47 @@ export function ProviderBottomNav({
   ];
 
   return (
-    <div className="bg-white border-t border-[#e2e8f0] flex pb-4 pt-1.5 shrink-0 relative z-20">
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          onClick={() => nav(t.screen)}
-          className="flex flex-1 flex-col gap-1 items-center pt-1.5 touch-manipulation relative"
-        >
-          <div className="relative">
-            {t.icon(active === t.id)}
-            {t.badge && (
-              <span className="absolute -top-1 -right-2 bg-[#0d9488] text-white text-[9px] font-bold rounded-full size-4 flex items-center justify-center">
-                {t.badge}
-              </span>
-            )}
-          </div>
-          <span
-            className={`text-[11px] font-semibold ${
-              active === t.id ? "text-[#0d9488]" : "text-[#94a3b8]"
-            }`}
+    <div className="bg-white border-t border-[#E5E7EB] flex pb-4 pt-2 shrink-0 relative z-20 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
+      {tabs.map((t) => {
+        const isTabActive = t.id === active || t.match.includes(active);
+        return (
+          <button
+            key={t.id}
+            onClick={() => {
+              if (onSelectTab) {
+                onSelectTab(t.id as any);
+              } else if (nav) {
+                nav(t.screen);
+              }
+            }}
+            className="flex flex-1 flex-col gap-1 items-center touch-manipulation relative cursor-pointer group"
           >
-            {t.label}
-          </span>
-        </button>
-      ))}
+            {/* Top Indicator bar */}
+            <div
+              className={`h-0.5 w-6 rounded-full transition-all mb-0.5 ${
+                isTabActive ? "bg-[#115E59]" : "bg-transparent group-hover:bg-slate-200"
+              }`}
+            />
+            <div className="relative">
+              {t.icon(isTabActive)}
+              {t.badge && (
+                <span className="absolute -top-1 -right-2 bg-[#DC2626] text-white text-[9px] font-bold rounded-full size-4 flex items-center justify-center animate-pulse">
+                  {t.badge}
+                </span>
+              )}
+            </div>
+            <span
+              className={`text-[10px] tracking-tight transition-colors ${
+                isTabActive
+                  ? "text-[#115E59] font-bold"
+                  : "text-[#6B7280] font-medium"
+              }`}
+            >
+              {t.label}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

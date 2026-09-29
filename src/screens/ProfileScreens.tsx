@@ -82,54 +82,8 @@ export function UserProfileScreen({
           </div>
         </div>
 
-        {/* Provider Mode Banner / Switcher */}
-        <div className="p-5 pb-2">
-          {isApprovedProvider ? (
-            <button
-              onClick={onSwitchToProviderMode}
-              className="bg-white border-2 border-[#0d9488] shadow-xs flex gap-3.5 items-center p-4 rounded-2xl w-full text-left active:bg-teal-50 transition-colors touch-manipulation"
-            >
-              <div className="bg-[#f0fdfa] border border-[#ccfbf1] rounded-xl size-11 flex items-center justify-center text-xl shrink-0">
-                🔄
-              </div>
-              <div className="flex flex-col flex-1 min-w-0">
-                <span className="text-[#0d9488] text-sm font-bold">
-                  Switch to Provider Mode
-                </span>
-                <span className="text-[#64748b] text-[11px]">
-                  Access your provider dashboard & manage job requests
-                </span>
-              </div>
-              <svg className="size-4 text-[#0d9488] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          ) : (
-            <div className="bg-gradient-to-br from-[#115e59] to-[#0d9488] rounded-2xl p-4 flex gap-3 items-center shadow-md">
-              <TappyAvatar size={50} />
-              <div className="flex flex-1 flex-col gap-1">
-                <span
-                  className="text-white text-xs font-bold"
-                  style={{ fontFamily: "Lexend Deca, sans-serif" }}
-                >
-                  Earn as a Specialist
-                </span>
-                <span className="text-[#ccfbf1] text-[11px] leading-tight">
-                  Offer your skills and services to homeowners in San Pablo City.
-                </span>
-                <button
-                  onClick={() => nav("provider-apply")}
-                  className="bg-white text-[#0f766e] text-[11px] font-bold px-3 py-1.5 rounded-full self-start active:bg-slate-100 touch-manipulation mt-1 shadow-xs"
-                >
-                  Apply as Provider →
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* Menu Items */}
-        <div className="flex flex-col gap-2 p-5 pt-2">
+        <div className="flex flex-col gap-2 p-5 pt-4">
           {menuItems.map((item) => (
             <button
               key={item.label}

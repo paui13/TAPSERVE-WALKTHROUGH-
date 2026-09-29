@@ -1,30 +1,21 @@
 import React, { useState } from "react";
 import { A, TapServeIcon } from "../components/SharedUI";
+import {
+  CredentialDoc,
+  CredentialItem,
+  DocumentReviewModal,
+} from "../components/DocumentReviewModal";
 
 export type AdminTab =
   | "dashboard"
   | "credentials"
   | "accounts"
   | "bookings"
+  | "sales"
   | "concerns"
   | "violations"
   | "appeals"
   | "mod-rules";
-
-interface CredentialItem {
-  id: string;
-  name: string;
-  initials: string;
-  avatarBg: string;
-  serviceType: string;
-  submittedDate: string;
-  providedDocs: string;
-  status: "Pending" | "Verified" | "Rejected";
-  phone: string;
-  email: string;
-  experience: string;
-  docsList: { title: string; type: string; verified: boolean }[];
-}
 
 interface UserAccountItem {
   id: string;
@@ -70,9 +61,11 @@ interface AdminBookingItem {
 
 export function AdminPortal({
   onSwitchToMobile,
+  onSwitchToProvider,
   onToast,
 }: {
   onSwitchToMobile: () => void;
+  onSwitchToProvider?: () => void;
   onToast: (msg: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
@@ -85,6 +78,10 @@ export function AdminPortal({
   >("All");
   const [selectedCredential, setSelectedCredential] =
     useState<CredentialItem | null>(null);
+  const [reviewingDocTarget, setReviewingDocTarget] = useState<{
+    credentialId: string;
+    docIndex: number;
+  } | null>(null);
 
   const [credentialsList, setCredentialsList] = useState<CredentialItem[]>([
     {
@@ -94,15 +91,57 @@ export function AdminPortal({
       avatarBg: "bg-purple-600",
       serviceType: "Electrical Services",
       submittedDate: "Oct 24, 2026",
-      providedDocs: "Government, Certification",
+      providedDocs: "Government, Certification, Clearance",
       status: "Pending",
       phone: "+63 920 112 4589",
       email: "rogelio.dc@gmail.com",
       experience: "8 years residential & commercial wiring",
       docsList: [
-        { title: "Philippine National ID", type: "Government ID", verified: true },
-        { title: "TESDA NC II Electrical Installation", type: "Certification", verified: true },
-        { title: "Barangay Clearance (San Roque)", type: "Clearance", verified: false },
+        {
+          id: "doc-1-1",
+          title: "Philippine National ID",
+          type: "Government ID",
+          verified: true,
+          status: "Verified",
+          docNumber: "PhilSys 7192-3841-9920",
+          issuedDate: "Jan 14, 2023",
+          expiryDate: "Permanent (National ID)",
+          issuingAuthority: "Philippine Statistics Authority (PSA)",
+          documentCategory: "government_id",
+          fileFormat: "PNG",
+          fileSize: "2.4 MB",
+          notes: "Official PhilSys QR code validated. Microchip emblem and biometric photo match applicant profile.",
+        },
+        {
+          id: "doc-1-2",
+          title: "TESDA NC II Electrical Installation",
+          type: "Trade Certification",
+          verified: true,
+          status: "Verified",
+          docNumber: "TESDA-NC2-EIM-2022-8812",
+          issuedDate: "Aug 18, 2022",
+          expiryDate: "Aug 18, 2027",
+          issuingAuthority: "Technical Education and Skills Development Authority (TESDA IV-A Laguna)",
+          documentCategory: "tesda",
+          fileFormat: "PDF",
+          fileSize: "1.8 MB",
+          notes: "TESDA Registry verified. Competency in residential/commercial wiring and distribution board install.",
+        },
+        {
+          id: "doc-1-3",
+          title: "Barangay Clearance (San Roque)",
+          type: "Local Clearance",
+          verified: false,
+          status: "Pending Review",
+          docNumber: "BC-SR-2026-0941",
+          issuedDate: "Oct 19, 2026",
+          expiryDate: "Apr 19, 2027",
+          issuingAuthority: "Office of the Punong Barangay - San Roque, San Pablo City",
+          documentCategory: "clearance",
+          fileFormat: "PNG",
+          fileSize: "3.1 MB",
+          notes: "Ready for admin inspection. Issued within 6 months with official dry seal.",
+        },
       ],
     },
     {
@@ -112,15 +151,57 @@ export function AdminPortal({
       avatarBg: "bg-orange-500",
       serviceType: "Deep Cleaning Expert",
       submittedDate: "Oct 23, 2026",
-      providedDocs: "Clearance, Government",
+      providedDocs: "Government, Clearance, Sanitary Permit",
       status: "Pending",
       phone: "+63 918 445 7812",
       email: "sarah.alvarez@yahoo.com",
       experience: "5 years hotel housekeeping & disinfection",
       docsList: [
-        { title: "UMID SSS Card", type: "Government ID", verified: true },
-        { title: "NBI Clearance", type: "Clearance", verified: true },
-        { title: "Sanitary Permit", type: "Certification", verified: false },
+        {
+          id: "doc-2-1",
+          title: "UMID SSS Card",
+          type: "Government ID",
+          verified: true,
+          status: "Verified",
+          docNumber: "CRN-0111-7892345-8",
+          issuedDate: "Mar 10, 2021",
+          expiryDate: "Lifetime / Permanent",
+          issuingAuthority: "Social Security System (SSS Philippines)",
+          documentCategory: "government_id",
+          fileFormat: "PNG",
+          fileSize: "1.9 MB",
+          notes: "Cardholder identity matches SSS portal query.",
+        },
+        {
+          id: "doc-2-2",
+          title: "NBI Clearance",
+          type: "National Clearance",
+          verified: true,
+          status: "Verified",
+          docNumber: "NBI-CLR-2026-788102",
+          issuedDate: "Sep 05, 2026",
+          expiryDate: "Sep 05, 2027",
+          issuingAuthority: "National Bureau of Investigation (Laguna District)",
+          documentCategory: "clearance",
+          fileFormat: "PDF",
+          fileSize: "2.1 MB",
+          notes: "Confirmed NO DEROGATORY RECORD. Barcode verified with NBI clearance verification portal.",
+        },
+        {
+          id: "doc-2-3",
+          title: "Sanitary Permit & Health Certificate",
+          type: "Health Clearance",
+          verified: false,
+          status: "Pending Review",
+          docNumber: "SP-SPC-2026-4412",
+          issuedDate: "Oct 01, 2026",
+          expiryDate: "Oct 01, 2027",
+          issuingAuthority: "San Pablo City Health Office",
+          documentCategory: "permit",
+          fileFormat: "PNG",
+          fileSize: "1.5 MB",
+          notes: "Sanitary inspection and lab exams marked Fit to Work.",
+        },
       ],
     },
     {
@@ -130,14 +211,42 @@ export function AdminPortal({
       avatarBg: "bg-purple-600",
       serviceType: "Gardening & Landscape",
       submittedDate: "Oct 22, 2026",
-      providedDocs: "Business, Government",
+      providedDocs: "Government ID, Business Registration",
       status: "Pending",
       phone: "+63 927 889 0123",
       email: "juanito.perez@live.com",
       experience: "10 years lawn care & tree trimming",
       docsList: [
-        { title: "Driver's License", type: "Government ID", verified: true },
-        { title: "DTI Business Registration", type: "Business", verified: true },
+        {
+          id: "doc-3-1",
+          title: "Driver's License (LTO)",
+          type: "Government ID",
+          verified: true,
+          status: "Verified",
+          docNumber: "N02-18-098712",
+          issuedDate: "Jun 20, 2023",
+          expiryDate: "Jun 20, 2033",
+          issuingAuthority: "Land Transportation Office (LTO San Pablo)",
+          documentCategory: "government_id",
+          fileFormat: "PNG",
+          fileSize: "2.2 MB",
+          notes: "Professional driver license with 10-year validity.",
+        },
+        {
+          id: "doc-3-2",
+          title: "DTI Business Name Registration",
+          type: "Business Registration",
+          verified: true,
+          status: "Verified",
+          docNumber: "DTI-BMR-4882910",
+          issuedDate: "Feb 12, 2024",
+          expiryDate: "Feb 12, 2029",
+          issuingAuthority: "Department of Trade and Industry (DTI Region IV-A)",
+          documentCategory: "business",
+          fileFormat: "PDF",
+          fileSize: "2.8 MB",
+          notes: "Registered Trade Name: Juanito's Green Oasis Landscaping. Territorial Scope: San Pablo City.",
+        },
       ],
     },
     {
@@ -147,14 +256,42 @@ export function AdminPortal({
       avatarBg: "bg-teal-600",
       serviceType: "Plumbing",
       submittedDate: "Oct 20, 2026",
-      providedDocs: "Certification, Clearance",
+      providedDocs: "Certification, Police Clearance",
       status: "Pending",
       phone: "+63 915 223 9988",
       email: "pedro.plumber@gmail.com",
       experience: "6 years pipe installation & sewer repair",
       docsList: [
-        { title: "TESDA Plumbing NC II", type: "Certification", verified: true },
-        { title: "Police Clearance", type: "Clearance", verified: true },
+        {
+          id: "doc-4-1",
+          title: "TESDA Plumbing NC II",
+          type: "Trade Certification",
+          verified: true,
+          status: "Verified",
+          docNumber: "TESDA-NC2-PLB-2021-3948",
+          issuedDate: "May 15, 2021",
+          expiryDate: "May 15, 2026",
+          issuingAuthority: "TESDA Regional Training Center Laguna",
+          documentCategory: "tesda",
+          fileFormat: "PDF",
+          fileSize: "2.0 MB",
+          notes: "Accredited in pipe fitting, drainage installation, and pressure leak diagnostics.",
+        },
+        {
+          id: "doc-4-2",
+          title: "National Police Clearance",
+          type: "Police Clearance",
+          verified: false,
+          status: "Pending Review",
+          docNumber: "PNP-SPC-2026-1184",
+          issuedDate: "Oct 12, 2026",
+          expiryDate: "Apr 12, 2027",
+          issuingAuthority: "Philippine National Police - San Pablo City Station",
+          documentCategory: "clearance",
+          fileFormat: "PNG",
+          fileSize: "2.6 MB",
+          notes: "Official PNP security watermark present. Awaiting admin clearance review.",
+        },
       ],
     },
     {
@@ -164,14 +301,42 @@ export function AdminPortal({
       avatarBg: "bg-orange-500",
       serviceType: "Plumbing Specialist",
       submittedDate: "Oct 15, 2026",
-      providedDocs: "License, Government",
+      providedDocs: "Professional License, Passport ID",
       status: "Verified",
       phone: "+63 917 555 9012",
       email: "reynaldo.pipes@tapserve.demo",
       experience: "12 years Master Plumber certification",
       docsList: [
-        { title: "PRC Master Plumber License", type: "License", verified: true },
-        { title: "Passport ID", type: "Government ID", verified: true },
+        {
+          id: "doc-5-1",
+          title: "PRC Master Plumber License",
+          type: "Professional License",
+          verified: true,
+          status: "Verified",
+          docNumber: "PRC-MP-0014829",
+          issuedDate: "Jul 11, 2018",
+          expiryDate: "Jul 11, 2027",
+          issuingAuthority: "Professional Regulation Commission (PRC)",
+          documentCategory: "license",
+          fileFormat: "PNG",
+          fileSize: "1.7 MB",
+          notes: "Licensed Master Plumber verified against PRC online verification database.",
+        },
+        {
+          id: "doc-5-2",
+          title: "Philippine Passport ID",
+          type: "Government ID",
+          verified: true,
+          status: "Verified",
+          docNumber: "P9928172B",
+          issuedDate: "Nov 04, 2022",
+          expiryDate: "Nov 04, 2032",
+          issuingAuthority: "Department of Foreign Affairs (DFA)",
+          documentCategory: "government_id",
+          fileFormat: "PNG",
+          fileSize: "2.3 MB",
+          notes: "Valid DFA passport. Photo and signature verified.",
+        },
       ],
     },
     {
@@ -181,14 +346,42 @@ export function AdminPortal({
       avatarBg: "bg-blue-600",
       serviceType: "House Cleaning",
       submittedDate: "Oct 10, 2026",
-      providedDocs: "Clearance, Government",
+      providedDocs: "Government ID, Barangay Clearance",
       status: "Verified",
       phone: "+63 919 778 3341",
       email: "maria.clean@tapserve.demo",
       experience: "7 years commercial & residential deep cleaning",
       docsList: [
-        { title: "Postal ID", type: "Government ID", verified: true },
-        { title: "Barangay San Pablo Clearance", type: "Clearance", verified: true },
+        {
+          id: "doc-6-1",
+          title: "Postal ID (PhilPost)",
+          type: "Government ID",
+          verified: true,
+          status: "Verified",
+          docNumber: "PID-2023-882710",
+          issuedDate: "Apr 09, 2023",
+          expiryDate: "Apr 09, 2026",
+          issuingAuthority: "Philippine Postal Corporation",
+          documentCategory: "government_id",
+          fileFormat: "PNG",
+          fileSize: "1.6 MB",
+          notes: "PhilPost hologram authenticated.",
+        },
+        {
+          id: "doc-6-2",
+          title: "Barangay San Pablo Clearance",
+          type: "Clearance",
+          verified: true,
+          status: "Verified",
+          docNumber: "BC-SP-2026-5521",
+          issuedDate: "Oct 01, 2026",
+          expiryDate: "Apr 01, 2027",
+          issuingAuthority: "Barangay IV-A San Pablo City",
+          documentCategory: "clearance",
+          fileFormat: "PNG",
+          fileSize: "2.1 MB",
+          notes: "Certificate of residency and good moral character verified.",
+        },
       ],
     },
     {
@@ -198,16 +391,77 @@ export function AdminPortal({
       avatarBg: "bg-orange-500",
       serviceType: "Electrical Services",
       submittedDate: "Oct 8, 2026",
-      providedDocs: "Government",
+      providedDocs: "Government ID",
       status: "Rejected",
       phone: "+63 916 332 1109",
       email: "cardo.e@outlook.com",
       experience: "3 years wiring (lacks Master Electrician certification)",
       docsList: [
-        { title: "Voter's Certificate", type: "Government ID", verified: false },
+        {
+          id: "doc-7-1",
+          title: "Voter's Certificate",
+          type: "Government ID",
+          verified: false,
+          status: "Needs Re-upload",
+          docNumber: "COMELEC-2022-091823",
+          issuedDate: "May 09, 2022",
+          expiryDate: "Indefinite",
+          issuingAuthority: "Commission on Elections (COMELEC San Pablo)",
+          documentCategory: "government_id",
+          fileFormat: "PNG",
+          fileSize: "1.4 MB",
+          notes: "Applicant must provide TESDA NC II Electrical certification or Master Electrician license. Basic voter certificate alone is insufficient for electrical services.",
+          rejectionReason: "Missing TESDA NC II electrical trade certification or Master Electrician license.",
+        },
       ],
     },
   ]);
+
+  const handleUpdateDocStatus = (
+    credentialId: string,
+    docIndex: number,
+    newStatus: "Verified" | "Pending Review" | "Needs Re-upload",
+    note?: string,
+    reason?: string
+  ) => {
+    setCredentialsList((prev) =>
+      prev.map((c) => {
+        if (c.id !== credentialId) return c;
+        const nextDocs = c.docsList.map((d, idx) => {
+          if (idx !== docIndex) return d;
+          return {
+            ...d,
+            verified: newStatus === "Verified",
+            status: newStatus,
+            notes: note !== undefined ? note : d.notes,
+            rejectionReason: reason !== undefined ? reason : d.rejectionReason,
+          };
+        });
+        return {
+          ...c,
+          docsList: nextDocs,
+        };
+      })
+    );
+
+    setSelectedCredential((prev) => {
+      if (!prev || prev.id !== credentialId) return prev;
+      const nextDocs = prev.docsList.map((d, idx) => {
+        if (idx !== docIndex) return d;
+        return {
+          ...d,
+          verified: newStatus === "Verified",
+          status: newStatus,
+          notes: note !== undefined ? note : d.notes,
+          rejectionReason: reason !== undefined ? reason : d.rejectionReason,
+        };
+      });
+      return {
+        ...prev,
+        docsList: nextDocs,
+      };
+    });
+  };
 
   // ─── Accounts State ──────────────────────────────────────────────────────────
   const [accountRoleFilter, setAccountRoleFilter] = useState<
@@ -604,6 +858,16 @@ export function AdminPortal({
                 ),
               },
               {
+                id: "sales",
+                label: "Sales & Plans",
+                badge: "10% Cut",
+                icon: (
+                  <svg className="size-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+              },
+              {
                 id: "concerns",
                 label: "Concerns",
                 badge: "2",
@@ -679,17 +943,28 @@ export function AdminPortal({
 
         {/* Sidebar Footer */}
         <div className="p-4 border-t border-white/10 flex flex-col gap-3">
-          {/* Toggle Switch to Mobile App */}
+          {/* Toggle Switch to Customer Mobile App */}
           <button
             onClick={onSwitchToMobile}
             className="flex items-center justify-center gap-2 bg-[#0d9488] hover:bg-[#0f766e] text-white px-3 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-98 cursor-pointer"
-            title="Switch view to Mobile Application"
+            title="Switch view to Customer Mobile Application"
           >
             <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
-            <span>📱 Switch to Mobile App</span>
+            <span>📱 Customer App</span>
           </button>
+
+          {/* Toggle Switch to Provider Mode */}
+          {onSwitchToProvider && (
+            <button
+              onClick={onSwitchToProvider}
+              className="flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-3 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-98 cursor-pointer"
+              title="Switch view to Service Provider Mode"
+            >
+              <span>👷 Provider Mode</span>
+            </button>
+          )}
 
           {/* Logout Button */}
           <button
@@ -728,6 +1003,7 @@ export function AdminPortal({
               {activeTab === "credentials" && "Credential Verification"}
               {activeTab === "accounts" && "User & Provider Account Management"}
               {activeTab === "bookings" && "Booking Oversight"}
+              {activeTab === "sales" && "Platform Sales, Revenue & Subscriptions"}
               {activeTab === "concerns" && "Concerns & Reports Oversight"}
               {activeTab === "violations" && "Violations"}
               {activeTab === "appeals" && "Appeals"}
@@ -857,6 +1133,13 @@ export function AdminPortal({
                 }
                 onToast("Specialist application rejected.");
               }}
+              onOpenDocReview={(item, docIdx) => {
+                setSelectedCredential(item);
+                setReviewingDocTarget({
+                  credentialId: item.id,
+                  docIndex: docIdx !== undefined ? docIdx : 0,
+                });
+              }}
               search={searchQuery}
             />
           )}
@@ -909,12 +1192,69 @@ export function AdminPortal({
             />
           )}
 
+          {activeTab === "sales" && (
+            <SalesAndSubscriptionsView
+              bookings={adminBookings}
+              onToast={onToast}
+              globalSearch={searchQuery}
+            />
+          )}
+
           {activeTab === "concerns" && <ConcernsView onToast={onToast} globalSearch={searchQuery} />}
           {activeTab === "violations" && <ViolationsView onToast={onToast} globalSearch={searchQuery} />}
           {activeTab === "appeals" && <AppealsView onToast={onToast} globalSearch={searchQuery} />}
           {activeTab === "mod-rules" && <ModRulesView onToast={onToast} globalSearch={searchQuery} />}
         </main>
       </div>
+
+      {/* ─── Document Review & Inspection Modal ─── */}
+      {reviewingDocTarget && (() => {
+        const targetCred = credentialsList.find(
+          (c) => c.id === reviewingDocTarget.credentialId
+        );
+        if (!targetCred) return null;
+        return (
+          <DocumentReviewModal
+            credential={targetCred}
+            activeDocIndex={reviewingDocTarget.docIndex}
+            onChangeDocIndex={(idx) =>
+              setReviewingDocTarget({
+                credentialId: reviewingDocTarget.credentialId,
+                docIndex: idx,
+              })
+            }
+            onClose={() => setReviewingDocTarget(null)}
+            onUpdateDocStatus={(docIdx, status, note, reason) =>
+              handleUpdateDocStatus(targetCred.id, docIdx, status, note, reason)
+            }
+            onApproveApplicant={(id) => {
+              setCredentialsList((prev) =>
+                prev.map((c) => (c.id === id ? { ...c, status: "Verified" } : c))
+              );
+              if (selectedCredential?.id === id) {
+                setSelectedCredential((prev) =>
+                  prev ? { ...prev, status: "Verified" } : null
+                );
+              }
+              setReviewingDocTarget(null);
+              onToast("All documents verified! Specialist credentials approved.");
+            }}
+            onRejectApplicant={(id) => {
+              setCredentialsList((prev) =>
+                prev.map((c) => (c.id === id ? { ...c, status: "Rejected" } : c))
+              );
+              if (selectedCredential?.id === id) {
+                setSelectedCredential((prev) =>
+                  prev ? { ...prev, status: "Rejected" } : null
+                );
+              }
+              setReviewingDocTarget(null);
+              onToast("Specialist application flagged and rejected.");
+            }}
+            onToast={onToast}
+          />
+        );
+      })()}
     </div>
   );
 }
@@ -1343,6 +1683,7 @@ function CredentialsView({
   onSelectItem,
   onApprove,
   onReject,
+  onOpenDocReview,
   search,
 }: {
   filter: "All" | "Pending" | "Approved" | "Rejected";
@@ -1352,6 +1693,7 @@ function CredentialsView({
   onSelectItem: (item: CredentialItem) => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onOpenDocReview?: (item: CredentialItem, docIndex: number) => void;
   search: string;
 }) {
   const filtered = credentials.filter((c) => {
@@ -1372,6 +1714,10 @@ function CredentialsView({
   const approvedCount = credentials.filter((c) => c.status === "Verified").length;
   const rejectedCount = credentials.filter((c) => c.status === "Rejected").length;
 
+  const selectedVerifiedDocs =
+    selectedItem?.docsList.filter((d) => d.status === "Verified").length || 0;
+  const totalSelectedDocs = selectedItem?.docsList.length || 0;
+
   return (
     <div className="flex gap-5 h-full max-w-[1400px] mx-auto">
       {/* Left List Table */}
@@ -1387,7 +1733,7 @@ function CredentialsView({
             <button
               key={tab.id}
               onClick={() => onFilterChange(tab.id as any)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 filter === tab.id
                   ? "bg-[#0d9488] text-white shadow-2xs"
                   : "bg-[#f8fafc] text-[#64748b] hover:bg-slate-100 border border-[#e2e8f0]"
@@ -1406,7 +1752,7 @@ function CredentialsView({
                 <th className="py-2.5 font-semibold">Specialist Name</th>
                 <th className="py-2.5 font-semibold">Service Type</th>
                 <th className="py-2.5 font-semibold">Submitted Date</th>
-                <th className="py-2.5 font-semibold">Provided Docs</th>
+                <th className="py-2.5 font-semibold">Submitted Docs (Click to Review)</th>
                 <th className="py-2.5 font-semibold">Status</th>
                 <th className="py-2.5 font-semibold text-right">Actions</th>
               </tr>
@@ -1434,8 +1780,30 @@ function CredentialsView({
                   </td>
                   <td className="py-3 text-[#475569]">{item.serviceType}</td>
                   <td className="py-3 text-[#64748b]">{item.submittedDate}</td>
-                  <td className="py-3 font-medium text-[#0f766e]">
-                    {item.providedDocs}
+                  <td className="py-3 font-medium">
+                    <div className="flex flex-wrap items-center gap-1.5 max-w-[260px]">
+                      {item.docsList.map((d, dIdx) => (
+                        <button
+                          key={d.id || dIdx}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectItem(item);
+                            if (onOpenDocReview) onOpenDocReview(item, dIdx);
+                          }}
+                          className={`text-[10px] px-2 py-0.5 rounded-lg font-medium border flex items-center gap-1 transition-all cursor-pointer ${
+                            d.status === "Verified"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                              : d.status === "Needs Re-upload"
+                              ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                              : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                          }`}
+                          title={`Click to inspect ${d.title}`}
+                        >
+                          <span>{d.status === "Verified" ? "✓" : d.status === "Needs Re-upload" ? "⚠️" : "⏳"}</span>
+                          <span className="truncate max-w-[110px]">{d.title.split(" ")[0]}</span>
+                        </button>
+                      ))}
+                    </div>
                   </td>
                   <td className="py-3">
                     <span
@@ -1451,15 +1819,28 @@ function CredentialsView({
                     </span>
                   </td>
                   <td className="py-3 text-right">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectItem(item);
-                      }}
-                      className="bg-[#0d9488] hover:bg-[#0f766e] text-white px-3 py-1 rounded-lg font-bold text-xs shadow-2xs transition-colors"
-                    >
-                      Review
-                    </button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectItem(item);
+                          if (onOpenDocReview) onOpenDocReview(item, 0);
+                        }}
+                        className="bg-[#0f766e] hover:bg-[#115e59] text-white px-2.5 py-1 rounded-lg font-bold text-xs shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Check and inspect submitted documents"
+                      >
+                        <span>👁️</span> Inspect Docs
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectItem(item);
+                        }}
+                        className="bg-slate-100 hover:bg-slate-200 text-[#334155] px-2 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer"
+                      >
+                        Details
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1469,12 +1850,12 @@ function CredentialsView({
       </div>
 
       {/* Right Slide-over / Detail Review Panel */}
-      <div className="w-[360px] shrink-0 bg-white border border-[#e2e8f0] rounded-2xl p-5 flex flex-col justify-between shadow-xs">
+      <div className="w-[390px] shrink-0 bg-white border border-[#e2e8f0] rounded-2xl p-5 flex flex-col justify-between shadow-xs">
         {selectedItem ? (
           <div className="flex flex-col gap-4 overflow-y-auto no-scrollbar">
             <div className="flex items-center gap-3 pb-3 border-b border-[#f1f5f9]">
               <div
-                className={`size-12 rounded-full text-white text-base font-bold flex items-center justify-center ${selectedItem.avatarBg}`}
+                className={`size-12 rounded-full text-white text-base font-bold flex items-center justify-center shrink-0 ${selectedItem.avatarBg}`}
               >
                 {selectedItem.initials}
               </div>
@@ -1509,32 +1890,112 @@ function CredentialsView({
               </div>
             </div>
 
-            {/* Document Verification Checklist */}
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-bold text-[#0f172a] uppercase tracking-wider">
-                Submitted Documents & Credentials
-              </span>
+            {/* Document Verification Checklist & Inspection */}
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#0f172a] uppercase tracking-wider flex items-center gap-1.5">
+                  <span>📄</span> Submitted Documents ({totalSelectedDocs})
+                </span>
+                <button
+                  onClick={() => onOpenDocReview && onOpenDocReview(selectedItem, 0)}
+                  className="text-[11px] font-bold text-[#0d9488] hover:text-[#0f766e] flex items-center gap-0.5 hover:underline cursor-pointer"
+                >
+                  Inspect All 🔍
+                </button>
+              </div>
+
+              {/* Document Audit Progress Bar */}
+              <div className="bg-[#f8fafc] border border-[#e2e8f0] p-2.5 rounded-xl flex flex-col gap-1.5">
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-[#64748b] font-medium">Verification Status:</span>
+                  <span className="font-bold text-[#0f766e]">
+                    {selectedVerifiedDocs} of {totalSelectedDocs} Verified
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#0d9488] transition-all duration-300 rounded-full"
+                    style={{
+                      width: `${(selectedVerifiedDocs / Math.max(totalSelectedDocs, 1)) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Document List Items */}
               <div className="flex flex-col gap-2">
                 {selectedItem.docsList.map((doc, idx) => (
                   <div
-                    key={idx}
-                    className="p-3 rounded-xl border border-[#e2e8f0] bg-white flex items-center justify-between text-xs"
+                    key={doc.id || idx}
+                    onClick={() => onOpenDocReview && onOpenDocReview(selectedItem, idx)}
+                    className="p-3 rounded-xl border border-[#e2e8f0] bg-white hover:border-[#0d9488] hover:bg-[#f0fdfa]/40 cursor-pointer transition-all flex flex-col gap-2 group shadow-2xs"
                   >
-                    <div className="flex flex-col">
-                      <span className="font-bold text-[#0f172a]">{doc.title}</span>
-                      <span className="text-[10px] text-[#64748b]">{doc.type}</span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-base shrink-0">
+                          {doc.documentCategory === "government_id"
+                            ? "🪪"
+                            : doc.documentCategory === "tesda"
+                            ? "🎖️"
+                            : doc.documentCategory === "clearance"
+                            ? "📜"
+                            : doc.documentCategory === "business"
+                            ? "🏢"
+                            : doc.documentCategory === "license"
+                            ? "⚖️"
+                            : "🩺"}
+                        </span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold text-[#0f172a] group-hover:text-[#0d9488] transition-colors truncate block">
+                            {doc.title}
+                          </span>
+                          <span className="text-[10px] text-[#64748b]">
+                            {doc.type} • {doc.fileSize}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 border uppercase tracking-wider ${
+                          doc.status === "Verified"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : doc.status === "Needs Re-upload"
+                            ? "bg-rose-50 text-rose-700 border-rose-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}
+                      >
+                        {doc.status === "Verified"
+                          ? "✓ Verified"
+                          : doc.status === "Needs Re-upload"
+                          ? "⚠️ Re-upload"
+                          : "⏳ Pending"}
+                      </span>
                     </div>
-                    <span className="text-xs font-bold text-[#0d9488] bg-[#f0fdfa] px-2 py-0.5 rounded border border-[#ccfbf1]">
-                      Valid
-                    </span>
+
+                    <div className="flex items-center justify-between text-[10px] text-[#64748b] pt-1.5 border-t border-[#f1f5f9]">
+                      <span className="truncate max-w-[200px] font-mono">
+                        {doc.docNumber}
+                      </span>
+                      <span className="font-bold text-[#0d9488] flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                        Review Doc →
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
+
+              {/* Primary Review Documents CTA Button */}
+              <button
+                onClick={() => onOpenDocReview && onOpenDocReview(selectedItem, 0)}
+                className="w-full mt-1 py-2.5 rounded-xl bg-[#0f766e] hover:bg-[#115e59] text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>🔍</span> Check & Inspect Submitted Documents
+              </button>
             </div>
 
             {/* Status Badge */}
             <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-[#e2e8f0]">
-              <span className="text-xs font-bold text-[#64748b]">Current Status:</span>
+              <span className="text-xs font-bold text-[#64748b]">Application Status:</span>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-bold ${
                   selectedItem.status === "Pending"
@@ -1560,13 +2021,13 @@ function CredentialsView({
           <div className="pt-4 border-t border-[#f1f5f9] flex gap-2">
             <button
               onClick={() => onReject(selectedItem.id)}
-              className="flex-1 py-2.5 rounded-xl border border-rose-300 text-rose-600 text-xs font-bold hover:bg-rose-50 transition-colors"
+              className="flex-1 py-2.5 rounded-xl border border-rose-300 text-rose-600 text-xs font-bold hover:bg-rose-50 transition-colors cursor-pointer"
             >
-              Reject
+              Reject Specialist
             </button>
             <button
               onClick={() => onApprove(selectedItem.id)}
-              className="flex-1 py-2.5 rounded-xl bg-[#0d9488] text-white text-xs font-bold hover:bg-[#0f766e] transition-colors shadow-2xs"
+              className="flex-1 py-2.5 rounded-xl bg-[#0d9488] text-white text-xs font-bold hover:bg-[#0f766e] transition-colors shadow-2xs cursor-pointer"
             >
               Approve Verification
             </button>
@@ -2014,7 +2475,9 @@ function BookingOversightView({
                 <th className="py-2.5 font-semibold">Provider</th>
                 <th className="py-2.5 font-semibold">Service</th>
                 <th className="py-2.5 font-semibold">Date & Time</th>
-                <th className="py-2.5 font-semibold">Amount</th>
+                <th className="py-2.5 font-semibold">Gross</th>
+                <th className="py-2.5 font-semibold text-[#0d9488]">10% Cut</th>
+                <th className="py-2.5 font-semibold">Provider (90%)</th>
                 <th className="py-2.5 font-semibold">Status</th>
                 <th className="py-2.5 font-semibold text-right">Actions</th>
               </tr>
@@ -2036,6 +2499,13 @@ function BookingOversightView({
                   <td className="py-3 text-[#475569]">{b.service}</td>
                   <td className="py-3 text-[#64748b]">{b.dateTime}</td>
                   <td className="py-3 font-bold text-[#0f172a]">₱{b.amount}</td>
+                  <td className="py-3 font-bold text-[#0d9488]">
+                    ₱{(b.amount * 0.1).toFixed(0)}
+                    <span className="text-[9px] bg-teal-50 text-[#0f766e] px-1 py-0.2 rounded ml-1 font-semibold border border-teal-200">10%</span>
+                  </td>
+                  <td className="py-3 font-semibold text-[#475569]">
+                    ₱{(b.amount * 0.9).toFixed(0)}
+                  </td>
                   <td className="py-3">
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -2135,9 +2605,22 @@ function BookingOversightView({
                 <span className="text-[#64748b]">PAYMENT STATUS</span>
                 <span className="font-bold text-emerald-600">{selectedBooking.paymentStatus}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#64748b]">AMOUNT</span>
-                <span className="font-bold text-base text-[#0f172a]">₱{selectedBooking.amount}</span>
+              <div className="flex flex-col gap-1.5 pt-1 border-t border-[#f1f5f9]">
+                <div className="flex justify-between">
+                  <span className="text-[#64748b]">GROSS AMOUNT</span>
+                  <span className="font-bold text-sm text-[#0f172a]">₱{selectedBooking.amount}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[#0d9488] font-semibold flex items-center gap-1">
+                    <span>TapServe 10% Platform Cut</span>
+                    <span className="text-[9px] bg-teal-50 text-[#0f766e] px-1 rounded border border-teal-200 font-bold">10%</span>
+                  </span>
+                  <span className="font-bold text-[#0d9488]">-₱{(selectedBooking.amount * 0.1).toFixed(0)}</span>
+                </div>
+                <div className="flex justify-between text-xs pt-1 border-t border-dashed border-[#e2e8f0]">
+                  <span className="text-[#475569] font-bold">PROVIDER PAYOUT (90%)</span>
+                  <span className="font-extrabold text-sm text-[#0f766e]">₱{(selectedBooking.amount * 0.9).toFixed(0)}</span>
+                </div>
               </div>
             </div>
 
@@ -2180,6 +2663,743 @@ function BookingOversightView({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4.5. PLATFORM SALES & ANNUAL SUBSCRIPTIONS VIEW (10% Commission + ₱1,000 Annual Fee)
+// ─────────────────────────────────────────────────────────────────────────────
+interface ProviderSubscriptionRecord {
+  id: string;
+  invoiceNo: string;
+  providerName: string;
+  providerInitials: string;
+  category: string;
+  planName: string;
+  amount: number;
+  paymentMethod: "GCash" | "Maya" | "Bank Transfer" | "Cash on Verification";
+  startDate: string;
+  renewalDate: string;
+  status: "Active (Paid)" | "Renewal Due Soon" | "Grace Period";
+  receiptRef: string;
+}
+
+const INITIAL_SUBSCRIPTIONS: ProviderSubscriptionRecord[] = [
+  {
+    id: "sub-1",
+    invoiceNo: "INV-SUB-2026-001",
+    providerName: "Kuya Reynaldo Cruz",
+    providerInitials: "RC",
+    category: "Plumbing",
+    planName: "TapServe Pro Annual License",
+    amount: 1000,
+    paymentMethod: "GCash",
+    startDate: "Oct 15, 2026",
+    renewalDate: "Oct 15, 2027",
+    status: "Active (Paid)",
+    receiptRef: "OR-SP-99101",
+  },
+  {
+    id: "sub-2",
+    invoiceNo: "INV-SUB-2026-002",
+    providerName: "Ate Maria Santos",
+    providerInitials: "MS",
+    category: "Cleaning",
+    planName: "TapServe Pro Annual License",
+    amount: 1000,
+    paymentMethod: "Maya",
+    startDate: "Oct 10, 2026",
+    renewalDate: "Oct 10, 2027",
+    status: "Active (Paid)",
+    receiptRef: "OR-SP-99102",
+  },
+  {
+    id: "sub-3",
+    invoiceNo: "INV-SUB-2026-003",
+    providerName: "Kuya Jose Ramirez",
+    providerInitials: "JR",
+    category: "Electrical",
+    planName: "TapServe Pro Annual License",
+    amount: 1000,
+    paymentMethod: "GCash",
+    startDate: "Nov 01, 2026",
+    renewalDate: "Nov 01, 2027",
+    status: "Active (Paid)",
+    receiptRef: "OR-SP-99103",
+  },
+  {
+    id: "sub-4",
+    invoiceNo: "INV-SUB-2026-004",
+    providerName: "Cardo Santos",
+    providerInitials: "CS",
+    category: "Carpentry",
+    planName: "TapServe Pro Annual License",
+    amount: 1000,
+    paymentMethod: "Bank Transfer",
+    startDate: "Sep 28, 2026",
+    renewalDate: "Sep 28, 2027",
+    status: "Active (Paid)",
+    receiptRef: "OR-SP-99104",
+  },
+  {
+    id: "sub-5",
+    invoiceNo: "INV-SUB-2026-005",
+    providerName: "Grace De Leon",
+    providerInitials: "GD",
+    category: "Aircon Cleaning",
+    planName: "TapServe Pro Annual License",
+    amount: 1000,
+    paymentMethod: "GCash",
+    startDate: "Oct 05, 2026",
+    renewalDate: "Oct 05, 2027",
+    status: "Active (Paid)",
+    receiptRef: "OR-SP-99105",
+  },
+  {
+    id: "sub-6",
+    invoiceNo: "INV-SUB-2026-006",
+    providerName: "Rogelio Dela Cruz",
+    providerInitials: "RD",
+    category: "Roof & Gutter",
+    planName: "TapServe Pro Annual License",
+    amount: 1000,
+    paymentMethod: "Cash on Verification",
+    startDate: "Nov 12, 2025",
+    renewalDate: "Nov 12, 2026",
+    status: "Renewal Due Soon",
+    receiptRef: "OR-SP-99088",
+  },
+  {
+    id: "sub-7",
+    invoiceNo: "INV-SUB-2026-007",
+    providerName: "Elena Bautista",
+    providerInitials: "EB",
+    category: "Disinfection",
+    planName: "TapServe Pro Annual License",
+    amount: 1000,
+    paymentMethod: "Maya",
+    startDate: "Oct 18, 2026",
+    renewalDate: "Oct 18, 2027",
+    status: "Active (Paid)",
+    receiptRef: "OR-SP-99107",
+  },
+  {
+    id: "sub-8",
+    invoiceNo: "INV-SUB-2026-008",
+    providerName: "Benito Ramos",
+    providerInitials: "BR",
+    category: "Gardening",
+    planName: "TapServe Pro Annual License",
+    amount: 1000,
+    paymentMethod: "GCash",
+    startDate: "Oct 20, 2026",
+    renewalDate: "Oct 20, 2027",
+    status: "Active (Paid)",
+    receiptRef: "OR-SP-99108",
+  },
+  {
+    id: "sub-9",
+    invoiceNo: "INV-SUB-2026-009",
+    providerName: "Danilo Morales",
+    providerInitials: "DM",
+    category: "Appliance Repair",
+    planName: "TapServe Pro Annual License",
+    amount: 1000,
+    paymentMethod: "GCash",
+    startDate: "Oct 22, 2026",
+    renewalDate: "Oct 22, 2027",
+    status: "Active (Paid)",
+    receiptRef: "OR-SP-99109",
+  },
+  {
+    id: "sub-10",
+    invoiceNo: "INV-SUB-2026-010",
+    providerName: "Lourdes Garcia",
+    providerInitials: "LG",
+    category: "Cleaning",
+    planName: "TapServe Pro Annual License",
+    amount: 1000,
+    paymentMethod: "Maya",
+    startDate: "Oct 25, 2026",
+    renewalDate: "Oct 25, 2027",
+    status: "Active (Paid)",
+    receiptRef: "OR-SP-99110",
+  },
+];
+
+function SalesAndSubscriptionsView({
+  bookings = [],
+  onToast,
+  globalSearch = "",
+}: {
+  bookings: AdminBookingItem[];
+  onToast: (msg: string) => void;
+  globalSearch?: string;
+}) {
+  const [salesSubTab, setSalesSubTab] = useState<
+    "overview" | "commission" | "subscriptions" | "settings"
+  >("overview");
+  const [subscriptionsList, setSubscriptionsList] =
+    useState<ProviderSubscriptionRecord[]>(INITIAL_SUBSCRIPTIONS);
+  const [selectedInvoice, setSelectedInvoice] =
+    useState<ProviderSubscriptionRecord | null>(null);
+  const [commissionRate, setCommissionRate] = useState<number>(10);
+  const [annualFee, setAnnualFee] = useState<number>(1000);
+
+  // Financial calculations
+  const totalGrossBookingVolume = bookings.reduce((sum, b) => sum + b.amount, 0);
+  const totalCommissionCut = Math.round(totalGrossBookingVolume * (commissionRate / 100));
+  const totalProviderPayouts = totalGrossBookingVolume - totalCommissionCut;
+  const totalSubscriptionRevenue = subscriptionsList.reduce((sum, s) => sum + s.amount, 0);
+  const totalPlatformNetSales = totalCommissionCut + totalSubscriptionRevenue;
+
+  // Filter subscriptions based on search
+  const filteredSubscriptions = subscriptionsList.filter(
+    (s) =>
+      s.providerName.toLowerCase().includes(globalSearch.toLowerCase()) ||
+      s.category.toLowerCase().includes(globalSearch.toLowerCase()) ||
+      s.invoiceNo.toLowerCase().includes(globalSearch.toLowerCase()) ||
+      s.receiptRef.toLowerCase().includes(globalSearch.toLowerCase())
+  );
+
+  const handleRenewSubscription = (subId: string) => {
+    setSubscriptionsList((prev) =>
+      prev.map((s) => {
+        if (s.id !== subId) return s;
+        return {
+          ...s,
+          status: "Active (Paid)",
+          renewalDate: "Oct 2027",
+          amount: s.amount + 1000,
+        };
+      })
+    );
+    onToast("₱1,000 Annual Subscription renewed! Valid for another 12 months.");
+  };
+
+  return (
+    <div className="flex flex-col gap-5 max-w-[1400px] mx-auto select-none">
+      {/* ─── Top Revenue Header KPIs ─── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Net Sales Card */}
+        <div className="bg-gradient-to-br from-[#115E59] to-[#0F766E] text-white rounded-2xl p-5 shadow-sm border border-teal-600 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#CCFBF1] uppercase tracking-wider">
+              Total Platform Sales
+            </span>
+            <span className="size-8 rounded-xl bg-white/15 flex items-center justify-center text-sm font-bold">
+              💰
+            </span>
+          </div>
+          <div className="my-2">
+            <h2 className="text-3xl font-black tracking-tight">₱{totalPlatformNetSales.toLocaleString()}</h2>
+            <span className="text-[11px] text-[#99F6E4] font-medium">
+              10% Commission + ₱1,000 Annual Subscriptions
+            </span>
+          </div>
+          <div className="pt-2 border-t border-white/15 flex items-center justify-between text-[11px]">
+            <span className="text-[#CCFBF1]">Q4 2026 Target:</span>
+            <span className="font-bold text-white">92.4% Met</span>
+          </div>
+        </div>
+
+        {/* 10% Booking Commission Card */}
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-[#0D9488]/40 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+              10% Booking Commission
+            </span>
+            <span className="size-8 rounded-xl bg-teal-50 text-[#0D9488] flex items-center justify-center text-xs font-bold border border-teal-100">
+              10%
+            </span>
+          </div>
+          <div className="my-2">
+            <h2 className="text-3xl font-bold text-[#0F172A] tracking-tight">₱{totalCommissionCut.toLocaleString()}</h2>
+            <span className="text-[11px] text-[#0D9488] font-bold">
+              From ₱{totalGrossBookingVolume.toLocaleString()} Gross Volume
+            </span>
+          </div>
+          <div className="pt-2 border-t border-[#F1F5F9] flex items-center justify-between text-[11px] text-[#64748B]">
+            <span>Platform Fee Cut:</span>
+            <span className="font-bold text-[#0F172A]">{commissionRate}% per service</span>
+          </div>
+        </div>
+
+        {/* ₱1,000 Annual Subscription Card */}
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-[#0D9488]/40 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+              Annual Subscriptions
+            </span>
+            <span className="size-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs font-bold border border-emerald-100">
+              ₱1k
+            </span>
+          </div>
+          <div className="my-2">
+            <h2 className="text-3xl font-bold text-[#0F172A] tracking-tight">₱{totalSubscriptionRevenue.toLocaleString()}</h2>
+            <span className="text-[11px] text-emerald-700 font-bold">
+              {subscriptionsList.length} Active Subscribed Specialists
+            </span>
+          </div>
+          <div className="pt-2 border-t border-[#F1F5F9] flex items-center justify-between text-[11px] text-[#64748B]">
+            <span>Subscription Rate:</span>
+            <span className="font-bold text-[#0F172A]">₱{annualFee.toLocaleString()} / specialist / year</span>
+          </div>
+        </div>
+
+        {/* Provider Net Payouts (90%) Card */}
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-[#0D9488]/40 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+              Provider Net Payouts
+            </span>
+            <span className="size-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-xs font-bold border border-indigo-100">
+              90%
+            </span>
+          </div>
+          <div className="my-2">
+            <h2 className="text-3xl font-bold text-[#0F172A] tracking-tight">₱{totalProviderPayouts.toLocaleString()}</h2>
+            <span className="text-[11px] text-[#64748B]">
+              Direct cash settled to specialists
+            </span>
+          </div>
+          <div className="pt-2 border-t border-[#F1F5F9] flex items-center justify-between text-[11px] text-[#64748B]">
+            <span>Specialist Retained:</span>
+            <span className="font-bold text-emerald-600">90% of job price</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Navigation Tabs Toolbar ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-[#E2E8F0] shadow-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {[
+            { id: "overview", label: "Financial Overview", icon: "📊" },
+            { id: "subscriptions", label: `₱1,000 Annual Subscriptions (${subscriptionsList.length})`, icon: "📑" },
+            { id: "commission", label: `10% Commission Ledger (${bookings.length})`, icon: "🧾" },
+            { id: "settings", label: "Monetization Rules", icon: "⚙️" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSalesSubTab(tab.id as any)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                salesSubTab === tab.id
+                  ? "bg-[#115E59] text-white shadow-2xs"
+                  : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100"
+              }`}
+            >
+              <span>{tab.icon}</span>
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onToast("Sales and subscription report exported to CSV!")}
+            className="px-3 py-1.5 rounded-xl border border-[#CBD5E1] text-[#0F172A] text-xs font-bold hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+          >
+            <span>📥</span>
+            <span>Export CSV</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ─── SUB-TAB 1: FINANCIAL OVERVIEW ─── */}
+      {salesSubTab === "overview" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Revenue Breakdown Card */}
+          <div className="lg:col-span-2 bg-white border border-[#E2E8F0] rounded-2xl p-5 flex flex-col gap-4 shadow-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-[#F1F5F9]">
+              <div className="flex flex-col">
+                <h3 className="text-sm font-bold text-[#0F172A]">Platform Monetization Breakdown</h3>
+                <span className="text-xs text-[#64748B]">San Pablo City Certified Service Network</span>
+              </div>
+              <span className="text-xs font-bold text-[#0D9488] bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
+                10% Cut + ₱1k Annual Fee
+              </span>
+            </div>
+
+            {/* Visual Stream Breakdown */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="bg-[#F8FAFA] border border-[#E2E8F0] p-4 rounded-xl flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#0F172A]">1. Booking Platform Fee (10%)</span>
+                  <span className="text-xs font-black text-[#0D9488]">₱{totalCommissionCut.toLocaleString()}</span>
+                </div>
+                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-[#0D9488] h-full rounded-full"
+                    style={{
+                      width: `${(totalCommissionCut / totalPlatformNetSales) * 100}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-[11px] text-[#64748B] leading-relaxed">
+                  Automatically deducted from every completed service appointment settled between client and provider.
+                </p>
+              </div>
+
+              <div className="bg-[#F8FAFA] border border-[#E2E8F0] p-4 rounded-xl flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#0F172A]">2. Annual Pro Subscriptions</span>
+                  <span className="text-xs font-black text-emerald-700">₱{totalSubscriptionRevenue.toLocaleString()}</span>
+                </div>
+                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-emerald-600 h-full rounded-full"
+                    style={{
+                      width: `${(totalSubscriptionRevenue / totalPlatformNetSales) * 100}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-[11px] text-[#64748B] leading-relaxed">
+                  ₱1,000 annual platform accreditation fee paid by certified specialists for PhilSys/TESDA verification badge and AI matching.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Summary Table */}
+            <div className="bg-[#F8FAFA] border border-[#E2E8F0] rounded-xl p-4 flex flex-col gap-2.5 text-xs">
+              <span className="font-bold text-[#0F172A] uppercase tracking-wider text-[10px]">
+                Platform Revenue Formula
+              </span>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-[#64748B]">Gross Client Bookings Volume</span>
+                <span className="font-semibold text-[#0F172A]">₱{totalGrossBookingVolume.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-[#64748B]">Platform 10% Commission Deducted</span>
+                <span className="font-bold text-[#0D9488]">+ ₱{totalCommissionCut.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-[#64748B]">Annual Provider Subscriptions ({subscriptionsList.length} × ₱1,000)</span>
+                <span className="font-bold text-emerald-700">+ ₱{totalSubscriptionRevenue.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between pt-1 text-sm">
+                <span className="font-bold text-[#0F172A]">Total TapServe Platform Revenue</span>
+                <span className="font-black text-base text-[#115E59]">₱{totalPlatformNetSales.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Subscriptions Summary Box */}
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 flex flex-col gap-4 shadow-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-[#F1F5F9]">
+              <h3 className="text-sm font-bold text-[#0F172A]">Active Subscriptions</h3>
+              <button
+                onClick={() => setSalesSubTab("subscriptions")}
+                className="text-xs text-[#0D9488] font-bold hover:underline"
+              >
+                View All →
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2.5 divide-y divide-[#F1F5F9]">
+              {subscriptionsList.slice(0, 5).map((sub) => (
+                <div key={sub.id} className="pt-2 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="size-8 rounded-full bg-[#115E59] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                      {sub.providerInitials}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-bold text-[#0F172A] truncate">{sub.providerName}</span>
+                      <span className="text-[10px] text-[#64748B]">{sub.category}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="font-bold text-[#0F172A]">₱{sub.amount}</span>
+                    <span className="text-[9px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.2 rounded-md">
+                      {sub.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => onToast("All 18 active provider subscription accounts are compliant.")}
+              className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0F172A] text-xs font-bold transition-colors cursor-pointer text-center mt-auto"
+            >
+              Audit Specialist Subscriptions
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── SUB-TAB 2: ₱1,000 ANNUAL SUBSCRIPTIONS TABLE ─── */}
+      {salesSubTab === "subscriptions" && (
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 flex flex-col gap-4 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#F1F5F9]">
+            <div className="flex flex-col">
+              <h3 className="text-sm font-bold text-[#0F172A]">₱1,000 Annual Specialist Subscriptions</h3>
+              <span className="text-xs text-[#64748B]">
+                Registered and verified trade service providers paying ₱1,000/year platform fee in San Pablo City
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#0D9488] bg-teal-50 px-3 py-1 rounded-xl border border-teal-200">
+                ₱{totalSubscriptionRevenue.toLocaleString()} Annual Fees Collected
+              </span>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="text-[#64748B] border-b border-[#F1F5F9]">
+                  <th className="py-2.5 font-semibold">Invoice No</th>
+                  <th className="py-2.5 font-semibold">Specialist Provider</th>
+                  <th className="py-2.5 font-semibold">Trade Category</th>
+                  <th className="py-2.5 font-semibold">Subscription Plan</th>
+                  <th className="py-2.5 font-semibold">Annual Rate</th>
+                  <th className="py-2.5 font-semibold">Payment</th>
+                  <th className="py-2.5 font-semibold">Renewal Due</th>
+                  <th className="py-2.5 font-semibold">Status</th>
+                  <th className="py-2.5 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#F8FAFC]">
+                {filteredSubscriptions.map((sub) => (
+                  <tr key={sub.id} className="hover:bg-[#F8FAFC] transition-colors">
+                    <td className="py-3 font-mono font-bold text-[#0D9488]">{sub.invoiceNo}</td>
+                    <td className="py-3 font-semibold text-[#0F172A]">{sub.providerName}</td>
+                    <td className="py-3 text-[#475569]">{sub.category}</td>
+                    <td className="py-3 text-[#64748B]">{sub.planName}</td>
+                    <td className="py-3 font-black text-[#0F172A]">₱{sub.amount.toLocaleString()}</td>
+                    <td className="py-3 text-[#475569]">{sub.paymentMethod}</td>
+                    <td className="py-3 text-[#64748B]">{sub.renewalDate}</td>
+                    <td className="py-3">
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          sub.status === "Active (Paid)"
+                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                            : "bg-amber-50 text-amber-800 border border-amber-200"
+                        }`}
+                      >
+                        {sub.status}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setSelectedInvoice(sub)}
+                          className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-[#0F172A] font-semibold text-xs cursor-pointer"
+                        >
+                          Invoice
+                        </button>
+                        {sub.status !== "Active (Paid)" && (
+                          <button
+                            onClick={() => handleRenewSubscription(sub.id)}
+                            className="px-2.5 py-1 rounded bg-[#115E59] text-white font-bold text-xs hover:bg-[#0F766E] shadow-2xs cursor-pointer"
+                          >
+                            Renew
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ─── SUB-TAB 3: 10% COMMISSION LEDGER ─── */}
+      {salesSubTab === "commission" && (
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 flex flex-col gap-4 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#F1F5F9]">
+            <div className="flex flex-col">
+              <h3 className="text-sm font-bold text-[#0F172A]">10% Platform Booking Commission Ledger</h3>
+              <span className="text-xs text-[#64748B]">
+                Itemized transaction fees deducted upon service completion across all bookings
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#0D9488] bg-teal-50 px-3 py-1 rounded-xl border border-teal-200">
+                10% Deducted: ₱{totalCommissionCut.toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="text-[#64748B] border-b border-[#F1F5F9]">
+                  <th className="py-2.5 font-semibold">Booking ID</th>
+                  <th className="py-2.5 font-semibold">Customer</th>
+                  <th className="py-2.5 font-semibold">Provider</th>
+                  <th className="py-2.5 font-semibold">Service</th>
+                  <th className="py-2.5 font-semibold">Gross Price</th>
+                  <th className="py-2.5 font-semibold text-[#0D9488]">10% Platform Cut</th>
+                  <th className="py-2.5 font-semibold">Provider Net (90%)</th>
+                  <th className="py-2.5 font-semibold">Status</th>
+                  <th className="py-2.5 font-semibold text-right">Fee Settlement</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#F8FAFC]">
+                {bookings.map((b) => (
+                  <tr key={b.id} className="hover:bg-[#F8FAFC] transition-colors">
+                    <td className="py-3 font-bold text-[#0D9488]">{b.id}</td>
+                    <td className="py-3 font-medium text-[#0F172A]">{b.customerName}</td>
+                    <td className="py-3 text-[#475569]">{b.providerName}</td>
+                    <td className="py-3 text-[#475569]">{b.service}</td>
+                    <td className="py-3 font-bold text-[#0F172A]">₱{b.amount}</td>
+                    <td className="py-3 font-black text-[#0D9488]">
+                      ₱{(b.amount * (commissionRate / 100)).toFixed(0)}
+                      <span className="text-[9px] bg-teal-50 text-[#0F766E] px-1 py-0.2 rounded ml-1 font-bold border border-teal-200">
+                        10%
+                      </span>
+                    </td>
+                    <td className="py-3 font-semibold text-[#475569]">
+                      ₱{(b.amount * ((100 - commissionRate) / 100)).toFixed(0)}
+                    </td>
+                    <td className="py-3">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800">
+                        {b.status}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      <span className="text-[11px] font-bold text-emerald-600">✓ Deducted</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ─── SUB-TAB 4: MONETIZATION SETTINGS ─── */}
+      {salesSubTab === "settings" && (
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-xs flex flex-col gap-5 max-w-2xl">
+          <div className="flex flex-col gap-1 pb-3 border-b border-[#F1F5F9]">
+            <h3 className="text-base font-bold text-[#0F172A]">Platform Monetization & Fee Controls</h3>
+            <p className="text-xs text-[#64748B]">
+              Configure platform fee percentages and annual subscription rates for certified service providers.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-4 text-xs">
+            <div className="flex flex-col gap-1.5">
+              <label className="font-bold text-[#0F172A]">Platform Booking Commission Deduction (%)</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  value={commissionRate}
+                  onChange={(e) => setCommissionRate(Number(e.target.value))}
+                  min={1}
+                  max={50}
+                  className="w-24 bg-[#F8FAFA] border border-[#CBD5E1] p-2.5 rounded-xl font-bold text-[#0F172A] outline-none"
+                />
+                <span className="text-[#64748B]">Current: 10% deducted automatically per completed customer service</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="font-bold text-[#0F172A]">Annual Provider Accreditation License (₱)</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  value={annualFee}
+                  onChange={(e) => setAnnualFee(Number(e.target.value))}
+                  min={100}
+                  max={10000}
+                  step={100}
+                  className="w-32 bg-[#F8FAFA] border border-[#CBD5E1] p-2.5 rounded-xl font-bold text-[#0F172A] outline-none"
+                />
+                <span className="text-[#64748B]">Current: ₱1,000 per specialist/year for PhilSys, TESDA compliance, and priority matching</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => onToast("Platform fee and subscription parameters updated successfully!")}
+              className="py-3 px-5 rounded-xl bg-[#115E59] hover:bg-[#0F766E] text-white font-bold text-xs transition-colors shadow-2xs w-fit cursor-pointer mt-2"
+            >
+              Save Monetization Settings
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── INVOICE / OFFICIAL RECEIPT MODAL ─── */}
+      {selectedInvoice && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4 border border-[#E2E8F0]">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+              <div className="flex items-center gap-2.5">
+                <div className="size-10 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-lg">
+                  🧾
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-[#0F172A]">Official Platform Receipt</span>
+                  <span className="text-[10px] text-[#64748B] font-mono">{selectedInvoice.invoiceNo}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedInvoice(null)}
+                className="size-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-xs font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Receipt Content */}
+            <div className="bg-[#F8FAFA] border border-[#E2E8F0] rounded-2xl p-4 flex flex-col gap-3 text-xs">
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">SPECIALIST:</span>
+                <span className="font-bold text-[#0F172A]">{selectedInvoice.providerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">TRADE CATEGORY:</span>
+                <span className="font-semibold text-[#0F172A]">{selectedInvoice.category}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">SUBSCRIPTION PLAN:</span>
+                <span className="font-semibold text-[#0F172A]">{selectedInvoice.planName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">VALIDITY PERIOD:</span>
+                <span className="font-semibold text-[#0F172A]">{selectedInvoice.startDate} – {selectedInvoice.renewalDate}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">PAYMENT CHANNEL:</span>
+                <span className="font-semibold text-[#0F172A]">{selectedInvoice.paymentMethod}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-[#E2E8F0] text-sm">
+                <span className="font-bold text-[#0F172A]">ANNUAL FEE PAID:</span>
+                <span className="font-black text-base text-[#115E59]">₱{selectedInvoice.amount.toLocaleString()}.00</span>
+              </div>
+            </div>
+
+            <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-center gap-2 text-xs text-emerald-800">
+              <span>✓</span>
+              <span>Accreditation Active: Verified Provider badge issued in San Pablo City.</span>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  onToast(`Printed copy generated for ${selectedInvoice.invoiceNo}`);
+                  setSelectedInvoice(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl border border-[#CBD5E1] text-[#0F172A] font-bold text-xs hover:bg-slate-50 cursor-pointer"
+              >
+                Print Receipt
+              </button>
+              <button
+                onClick={() => setSelectedInvoice(null)}
+                className="flex-1 py-2.5 rounded-xl bg-[#115E59] text-white font-bold text-xs hover:bg-[#0F766E] cursor-pointer shadow-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

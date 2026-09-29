@@ -166,51 +166,47 @@ export function HomeScreen({
     [providers, favorites]
   );
 
-  // Popular Services Near You - unified signature teal aesthetic
-  const popularServicesNearYou = [
-    {
-      id: "plumbing",
-      name: "Plumbing Repair",
-      emoji: "🚰",
-      tag: "Most Booked",
-      desc: "Pipe leaks, drains & faucets",
-    },
-    {
-      id: "cleaning",
-      name: "Deep Cleaning",
-      emoji: "🧹",
-      tag: "High Demand",
-      desc: "Full home & disinfection",
-    },
-    {
-      id: "electrical",
-      name: "Electrical Wiring",
-      emoji: "⚡",
-      tag: "Fast Response",
-      desc: "Breakers, lights & circuits",
-    },
-    {
-      id: "aircon",
-      name: "Aircon Cleaning",
-      emoji: "❄️",
-      tag: "Top Rated",
-      desc: "Filter, coil & coolant check",
-    },
-    {
-      id: "appliances",
-      name: "Appliance Repair",
-      emoji: "🔧",
-      tag: "Popular",
-      desc: "Refrigerators, washers & fans",
-    },
-    {
-      id: "carpentry",
-      name: "Carpentry & Woodwork",
-      emoji: "🔨",
-      tag: "Available",
-      desc: "Doors, cabinets & repairs",
-    },
-  ];
+  // Dynamic Popular Services Near You - computed from real categories & live provider stats
+  const popularServicesNearYou = useMemo(() => {
+    const descriptions: Record<string, { desc: string; defaultTag: string }> = {
+      cleaning: { desc: "Full home deep clean & disinfection", defaultTag: "High Demand" },
+      plumbing: { desc: "Pipe leaks, drains & faucets", defaultTag: "Most Booked" },
+      electrical: { desc: "Breakers, lights & circuits", defaultTag: "Fast Response" },
+      gardening: { desc: "Lawn trimming & landscape care", defaultTag: "Popular" },
+      "appliance-repair": { desc: "Refrigerators, washers & fans", defaultTag: "Fast Response" },
+      aircon: { desc: "Filter, coil & coolant check", defaultTag: "Top Rated" },
+      carpentry: { desc: "Doors, cabinets & repairs", defaultTag: "Available" },
+      "home-maintenance": { desc: "Roof leak sealing & gutters", defaultTag: "Seasonal" },
+      painting: { desc: "Interior & exterior wall paint", defaultTag: "Popular" },
+      "pest-control": { desc: "Termite & rodent extermination", defaultTag: "Fast Response" },
+      moving: { desc: "Packing & transport assistance", defaultTag: "Available" },
+      other: { desc: "General home repairs", defaultTag: "On Demand" },
+    };
+
+    return activeCategories.slice(0, 6).map((cat) => {
+      const catProviders = providers.filter((p) => p.categoryId === cat.id);
+      const totalJobs = catProviders.reduce((sum, p) => sum + (p.completedJobs || 0), 0);
+      const hasAvailableToday = catProviders.some((p) => p.isAcceptingBookings);
+      const meta = descriptions[cat.id] || {
+        desc: `${catProviders.length} active specialist${catProviders.length === 1 ? "" : "s"}`,
+        defaultTag: "Available",
+      };
+
+      let tag = meta.defaultTag;
+      if (totalJobs > 120) tag = "Most Booked";
+      else if (hasAvailableToday) tag = "Available Today";
+      else if (catProviders.length > 2) tag = "High Demand";
+
+      return {
+        id: cat.id,
+        name: cat.name,
+        emoji: cat.emoji,
+        tag,
+        desc: meta.desc,
+        providerCount: catProviders.length,
+      };
+    });
+  }, [activeCategories, providers]);
 
   return (
     <div className="bg-[#f8fafc] flex flex-col justify-between size-full relative">
@@ -263,10 +259,20 @@ export function HomeScreen({
                 </span>
               </button>
 
+              {/* Quick Switch to Provider Mode */}
+              <button
+                onClick={() => nav("provider-dashboard")}
+                className="bg-[#f0fdfa] border border-[#ccfbf1] text-[#0f766e] hover:bg-[#ccfbf1] flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold shadow-2xs transition-colors cursor-pointer"
+                title="Open Provider Mode"
+              >
+                <span>👷</span>
+                <span className="hidden sm:inline">Provider</span>
+              </button>
+
               {/* Notifications Bell with Unread Badge */}
               <button
                 onClick={() => setShowNotifications(true)}
-                className="relative bg-white border border-[#e2e8f0] p-2 rounded-full hover:bg-slate-50 transition-colors shadow-xs touch-manipulation"
+                className="relative bg-white border border-[#e2e8f0] p-2 rounded-full hover:bg-slate-50 transition-colors shadow-xs touch-manipulation cursor-pointer"
                 aria-label="View notifications"
               >
                 <svg
@@ -654,7 +660,7 @@ export function HomeScreen({
           </div>
         </div>
 
-        {/* ─── Popular Services Near You (Unified Teal Theme) ─── */}
+        {/* ─── Popular Services Near You (Dynamic from System Categories) ─── */}
         <div className="flex flex-col gap-3 py-3 px-6">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
@@ -665,14 +671,14 @@ export function HomeScreen({
                 Popular Services Near You
               </h3>
               <p className="text-[#64748b] text-xs truncate">
-                Commonly requested in San Pablo City & Laguna
+                {activeCategories.length} categories available in San Pablo City
               </p>
             </div>
             <button
               onClick={() => nav("all-categories")}
-              className="text-[#0d9488] text-xs font-bold hover:underline shrink-0"
+              className="text-[#0d9488] text-xs font-bold hover:underline shrink-0 cursor-pointer"
             >
-              See All →
+              See All ({activeCategories.length}) →
             </button>
           </div>
 
@@ -685,7 +691,7 @@ export function HomeScreen({
                   onSelectCategory(srv.id);
                   nav("browse");
                 }}
-                className="bg-white border border-[#ccfbf1] hover:border-[#0d9488] rounded-2xl p-3 flex flex-col gap-1.5 text-left shadow-xs transition-all active:scale-[0.98] group"
+                className="bg-white border border-[#ccfbf1] hover:border-[#0d9488] rounded-2xl p-3 flex flex-col gap-1.5 text-left shadow-xs transition-all active:scale-[0.98] group cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div className="bg-[#f0fdfa] border border-[#ccfbf1] text-xl size-9 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-[#ccfbf1]/50 transition-colors">
@@ -695,9 +701,14 @@ export function HomeScreen({
                     {srv.tag}
                   </span>
                 </div>
-                <span className="text-[#0f172a] text-xs font-bold line-clamp-1 pt-0.5">
-                  {srv.name}
-                </span>
+                <div className="flex items-baseline justify-between pt-0.5">
+                  <span className="text-[#0f172a] text-xs font-bold truncate">
+                    {srv.name}
+                  </span>
+                  <span className="text-[10px] text-[#0d9488] font-semibold shrink-0">
+                    {srv.providerCount} {srv.providerCount === 1 ? "pro" : "pros"}
+                  </span>
+                </div>
                 <span className="text-[#64748b] text-[10px] leading-tight line-clamp-1">
                   {srv.desc}
                 </span>
@@ -1150,11 +1161,13 @@ export function AllCategoriesScreen({
   nav,
   goBack,
   categories,
+  providers = [],
   onSelectCategory,
 }: {
   nav: (s: Screen) => void;
   goBack: () => void;
   categories: ServiceCategory[];
+  providers?: Provider[];
   onSelectCategory: (categoryId: string) => void;
 }) {
   const [search, setSearch] = useState("");
@@ -1176,18 +1189,23 @@ export function AllCategoriesScreen({
       <div className="bg-[#115e59] flex gap-3 items-center px-5 pt-12 pb-5 shrink-0">
         <button
           onClick={goBack}
-          className="bg-white/15 flex items-center justify-center rounded-xl size-9 active:bg-white/25 touch-manipulation text-white"
+          className="bg-white/15 flex items-center justify-center rounded-xl size-9 active:bg-white/25 touch-manipulation text-white cursor-pointer"
         >
           <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1
-          className="text-white text-lg font-bold flex-1"
-          style={{ fontFamily: "Lexend Deca, sans-serif" }}
-        >
-          All Service Categories
-        </h1>
+        <div className="flex flex-col flex-1 min-w-0">
+          <h1
+            className="text-white text-lg font-bold truncate"
+            style={{ fontFamily: "Lexend Deca, sans-serif" }}
+          >
+            All Service Categories
+          </h1>
+          <span className="text-teal-200 text-xs">
+            {activeCategories.length} categories available in San Pablo City
+          </span>
+        </div>
       </div>
 
       {/* Search Input */}
@@ -1203,6 +1221,14 @@ export function AllCategoriesScreen({
             placeholder="Search service categories..."
             className="flex-1 text-sm outline-none bg-transparent placeholder:text-[#94a3b8] text-[#0f172a]"
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="text-slate-400 hover:text-slate-600 text-xs cursor-pointer p-1"
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
 
@@ -1216,26 +1242,30 @@ export function AllCategoriesScreen({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {filtered.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  onSelectCategory(cat.id);
-                  nav("browse");
-                }}
-                className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col items-center gap-2 text-center active:bg-teal-50 touch-manipulation shadow-xs hover:border-[#99f6e4] transition-all"
-              >
-                <div className="bg-[#f0fdfa] border border-[#ccfbf1] flex items-center justify-center rounded-2xl size-14 text-3xl">
-                  <span>{cat.emoji}</span>
-                </div>
-                <span className="text-[#0f172a] text-xs font-bold leading-tight line-clamp-1">
-                  {cat.name}
-                </span>
-                <span className="bg-[#f0fdfa] text-[#0d9488] text-[11px] font-bold px-3 py-1 rounded-full border border-[#ccfbf1] mt-0.5">
-                  View Providers
-                </span>
-              </button>
-            ))}
+            {filtered.map((cat) => {
+              const matchingCount = providers.filter((p) => p.categoryId === cat.id).length;
+              const count = matchingCount > 0 ? matchingCount : cat.count || 0;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    onSelectCategory(cat.id);
+                    nav("browse");
+                  }}
+                  className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col items-center gap-2 text-center active:bg-teal-50 touch-manipulation shadow-xs hover:border-[#99f6e4] transition-all cursor-pointer group"
+                >
+                  <div className="bg-[#f0fdfa] border border-[#ccfbf1] flex items-center justify-center rounded-2xl size-14 text-3xl group-hover:scale-105 transition-transform">
+                    <span>{cat.emoji}</span>
+                  </div>
+                  <span className="text-[#0f172a] text-xs font-bold leading-tight line-clamp-1">
+                    {cat.name}
+                  </span>
+                  <span className="bg-[#f0fdfa] text-[#0d9488] text-[11px] font-bold px-3 py-1 rounded-full border border-[#ccfbf1] mt-0.5">
+                    {count} {count === 1 ? "Specialist" : "Specialists"}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -1267,27 +1297,79 @@ export function BrowseScreen({
   onToast: (msg: string) => void;
   bookingCount: number;
 }) {
-  const [filterMode, setFilterMode] = useState<"all" | "nearest" | "rating" | "budget">("nearest");
+  const [filterMode, setFilterMode] = useState<"nearest" | "rating" | "budget" | "available">("nearest");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const currentCategory = categories.find((c) => c.id === selectedCategoryId);
   const categoryTitle = currentCategory ? currentCategory.name : "All Services";
 
-  // Filter providers matching category
+  // Base list of providers for this category
+  const baseCategoryProviders = useMemo(() => {
+    if (!selectedCategoryId || selectedCategoryId === "all") return providers;
+    return providers.filter((p) => p.categoryId === selectedCategoryId);
+  }, [providers, selectedCategoryId]);
+
+  // Live filtered and sorted providers
   const filteredProviders = useMemo(() => {
-    let list = providers;
-    if (selectedCategoryId && selectedCategoryId !== "all") {
-      list = list.filter((p) => p.categoryId === selectedCategoryId);
+    let list = [...baseCategoryProviders];
+
+    // Search query within category
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.specialization.toLowerCase().includes(q) ||
+          p.area.toLowerCase().includes(q) ||
+          p.services.some((s) => s.toLowerCase().includes(q))
+      );
     }
 
+    // Interactive filter modes
     if (filterMode === "rating") {
-      return [...list].sort((a, b) => b.rating - a.rating);
+      // Actually filters specialists with rating >= 4.5 and sorts highest first
+      list = list.filter((p) => p.rating >= 4.5).sort((a, b) => b.rating - a.rating);
     } else if (filterMode === "budget") {
-      return [...list].sort((a, b) => a.hourlyRate - b.hourlyRate);
+      // Sorts by lowest rate first
+      list = [...list].sort((a, b) => a.hourlyRate - b.hourlyRate);
+    } else if (filterMode === "available") {
+      // Filters only specialists available today
+      list = list.filter((p) => p.isAcceptingBookings);
     } else {
-      // nearest
-      return [...list].sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+      // "nearest": sorts closest distance first
+      list = [...list].sort((a, b) => {
+        const distA = parseFloat(a.distance) || 99;
+        const distB = parseFloat(b.distance) || 99;
+        return distA - distB;
+      });
     }
-  }, [providers, selectedCategoryId, filterMode]);
+
+    return list;
+  }, [baseCategoryProviders, filterMode, searchQuery]);
+
+  // Dynamic status subtitle reflecting live filter state
+  const subtitleText = useMemo(() => {
+    const count = filteredProviders.length;
+    const total = baseCategoryProviders.length;
+    const plural = count === 1 ? "specialist" : "specialists";
+
+    if (searchQuery.trim()) {
+      return `${count} ${plural} matching "${searchQuery.trim()}"`;
+    }
+    if (filterMode === "rating") {
+      return `${count} of ${total} ${plural} rated 4.5+ in San Pablo City`;
+    }
+    if (filterMode === "budget") {
+      const lowestRate = filteredProviders[0]?.hourlyRate;
+      return lowestRate
+        ? `${count} ${plural} sorted by budget (from ₱${lowestRate}/hr)`
+        : `${count} budget-friendly ${plural} in San Pablo City`;
+    }
+    if (filterMode === "available") {
+      return `${count} of ${total} ${plural} available today in San Pablo City`;
+    }
+    return `${count} active ${plural} in San Pablo City (closest first)`;
+  }, [filteredProviders, baseCategoryProviders, filterMode, searchQuery]);
 
   return (
     <div className="relative bg-[#f8fafc] flex flex-col justify-between size-full">
@@ -1296,44 +1378,101 @@ export function BrowseScreen({
         <div className="flex gap-3.5 items-center px-6 py-4 bg-white border-b border-[#e2e8f0]">
           <button
             onClick={goBack}
-            className="bg-[#f1f5f9] border border-[#e2e8f0] flex items-center justify-center rounded-xl shrink-0 size-9 active:bg-slate-200 touch-manipulation"
+            className="bg-[#f1f5f9] border border-[#e2e8f0] flex items-center justify-center rounded-xl shrink-0 size-9 active:bg-slate-200 touch-manipulation cursor-pointer"
           >
             <svg className="size-4 text-[#0f172a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0 flex-1">
             <h2
-              className="text-[#0f172a] text-lg font-bold"
+              className="text-[#0f172a] text-lg font-bold truncate"
               style={{ fontFamily: "Lexend Deca, sans-serif" }}
             >
               {categoryTitle}
             </h2>
-            <span className="text-[#64748b] text-xs">
-              {filteredProviders.length} active specialist{filteredProviders.length === 1 ? "" : "s"} in San Pablo City
+            <span className="text-[#64748b] text-xs truncate">
+              {subtitleText}
             </span>
           </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex gap-2 items-center py-3 px-6 overflow-x-auto no-scrollbar bg-[#f8fafc]">
+        {/* Dynamic Filter Pills Row */}
+        <div className="flex gap-2 items-center py-2.5 px-6 overflow-x-auto no-scrollbar bg-[#f8fafc]">
           {[
             { id: "nearest", label: "Nearest first" },
             { id: "rating", label: "Rating 4.5+" },
             { id: "budget", label: "Budget-friendly" },
-          ].map((f) => (
+            { id: "available", label: "Available Today" },
+          ].map((f) => {
+            const isActive = filterMode === f.id;
+            return (
+              <button
+                key={f.id}
+                onClick={() => {
+                  if (isActive && f.id !== "nearest") {
+                    setFilterMode("nearest");
+                    onToast("Filter reset to nearest first");
+                  } else {
+                    setFilterMode(f.id as any);
+                    onToast(`Filtering: ${f.label}`);
+                  }
+                }}
+                className={`flex items-center gap-1 px-3.5 py-1.5 rounded-full shrink-0 border text-xs font-semibold transition-all touch-manipulation cursor-pointer ${
+                  isActive
+                    ? "bg-[#0d9488] border-[#0d9488] text-white shadow-2xs font-bold"
+                    : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#0d9488]/40 hover:text-[#0f172a]"
+                }`}
+              >
+                <span>{f.label}</span>
+                {isActive && (
+                  <span className="size-1.5 rounded-full bg-white ml-0.5 animate-pulse" />
+                )}
+              </button>
+            );
+          })}
+          {(filterMode !== "nearest" || searchQuery) && (
             <button
-              key={f.id}
-              onClick={() => setFilterMode(f.id as any)}
-              className={`flex items-center px-3.5 py-1.5 rounded-full shrink-0 border text-xs font-semibold transition-all touch-manipulation ${
-                filterMode === f.id
-                  ? "bg-[#0d9488] border-[#0d9488] text-white"
-                  : "bg-white border-[#e2e8f0] text-[#64748b]"
-              }`}
+              onClick={() => {
+                setFilterMode("nearest");
+                setSearchQuery("");
+                onToast("All filters cleared");
+              }}
+              className="text-[11px] font-bold text-[#0d9488] hover:underline shrink-0 px-2 cursor-pointer"
             >
-              {f.label}
+              Reset
             </button>
-          ))}
+          )}
+        </div>
+
+        {/* In-category Live Search */}
+        <div className="px-6 pb-2">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={`Search in ${categoryTitle} (e.g. name, area, service)...`}
+              className="w-full pl-9 pr-8 py-2 bg-white border border-[#e2e8f0] rounded-xl text-xs text-[#0f172a] placeholder-[#94a3b8] outline-none focus:border-[#0d9488] shadow-2xs transition-colors"
+            />
+            <svg
+              className="size-4 text-[#94a3b8] absolute left-3 top-2.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-2.5 text-[#94a3b8] hover:text-[#0f172a] text-xs cursor-pointer p-0.5"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Providers List */}
@@ -1347,17 +1486,32 @@ export function BrowseScreen({
                 No Providers Available
               </h3>
               <p className="text-[#64748b] text-xs max-w-[240px] leading-relaxed">
-                There are currently no available Service Providers for this category right now.
+                {searchQuery || filterMode !== "nearest"
+                  ? "No specialists match your active filter criteria. Try resetting filters."
+                  : "There are currently no available Service Providers for this category right now."}
               </p>
-              <button
-                onClick={() => nav("all-categories")}
-                className="bg-[#0d9488] text-white text-xs font-bold px-4 py-2 rounded-xl mt-2 active:brightness-90 touch-manipulation"
-              >
-                Browse Other Categories
-              </button>
+              <div className="flex gap-2">
+                {(searchQuery || filterMode !== "nearest") && (
+                  <button
+                    onClick={() => {
+                      setFilterMode("nearest");
+                      setSearchQuery("");
+                    }}
+                    className="bg-white border border-[#e2e8f0] text-[#0f172a] text-xs font-bold px-4 py-2 rounded-xl mt-2 active:bg-slate-50 cursor-pointer"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+                <button
+                  onClick={() => nav("all-categories")}
+                  className="bg-[#0d9488] text-white text-xs font-bold px-4 py-2 rounded-xl mt-2 active:brightness-90 touch-manipulation cursor-pointer"
+                >
+                  Browse Other Categories
+                </button>
+              </div>
             </div>
           ) : (
-            filteredProviders.map((p) => {
+            filteredProviders.map((p, index) => {
               const isFav = favorites.includes(p.id);
               return (
                 <div
@@ -1400,7 +1554,7 @@ export function BrowseScreen({
                                 : `${p.name} saved to favorites!`
                             );
                           }}
-                          className="p-1 touch-manipulation"
+                          className="p-1 touch-manipulation cursor-pointer"
                         >
                           <svg
                             className={`size-5 transition-colors ${
@@ -1424,7 +1578,9 @@ export function BrowseScreen({
                       </span>
 
                       <div className="flex items-center gap-3 pt-0.5">
-                        <div className="flex gap-1 items-center">
+                        <div className={`flex gap-1 items-center px-1.5 py-0.5 rounded-md ${
+                          filterMode === "rating" ? "bg-amber-50 text-amber-900 border border-amber-200" : ""
+                        }`}>
                           <svg className="size-3 text-amber-500 fill-amber-500" viewBox="0 0 20 20">
                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                           </svg>
@@ -1432,11 +1588,23 @@ export function BrowseScreen({
                             {p.rating}
                           </span>
                           <span className="text-[#94a3b8] text-[11px]">
-                            ({p.reviewCount} reviews)
+                            ({p.reviewCount})
                           </span>
+                          {filterMode === "rating" && (
+                            <span className="text-[10px] text-amber-700 font-bold ml-0.5">
+                              Top Rated
+                            </span>
+                          )}
                         </div>
-                        <span className="text-[#64748b] text-[11px]">
+                        <span className={`text-[11px] px-1.5 py-0.5 rounded-md ${
+                          filterMode === "nearest" ? "bg-teal-50 text-[#0f766e] border border-teal-100 font-bold" : "text-[#64748b]"
+                        }`}>
                           📍 {p.distance}
+                          {filterMode === "nearest" && index === 0 && (
+                            <span className="text-[10px] text-[#0d9488] font-bold ml-1">
+                              (Closest)
+                            </span>
+                          )}
                         </span>
                       </div>
                     </div>
@@ -1456,29 +1624,35 @@ export function BrowseScreen({
 
                   {/* Rate & Book Actions */}
                   <div className="flex items-center justify-between pt-1 border-t border-[#f1f5f9]">
-                    <span className="text-[#0f766e] text-sm font-bold">
-                      ₱{p.hourlyRate}/hr
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          onSelectProvider(p);
-                          nav("provider-profile");
-                        }}
-                        className="border border-[#e2e8f0] text-[#0f172a] text-xs font-bold px-3 py-1.5 rounded-xl active:bg-slate-50 touch-manipulation"
-                      >
-                        Profile
-                      </button>
-                      <button
-                        onClick={() => {
-                          onSelectProvider(p);
-                          nav("booking");
-                        }}
-                        className="bg-[#0d9488] text-white text-xs font-bold px-4 py-1.5 rounded-xl active:brightness-90 touch-manipulation shadow-xs"
-                      >
-                        Book Service
-                      </button>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-sm font-bold ${
+                        filterMode === "budget"
+                          ? "text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg"
+                          : "text-[#0f766e]"
+                      }`}>
+                        ₱{p.hourlyRate}/hr
+                      </span>
+                      {filterMode === "budget" && index === 0 && (
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                          Lowest Rate
+                        </span>
+                      )}
+                      {p.hourlyRate <= 280 && filterMode !== "budget" && (
+                        <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.2 rounded">
+                          Budget
+                        </span>
+                      )}
                     </div>
+
+                    <button
+                      onClick={() => {
+                        onSelectProvider(p);
+                        nav("booking");
+                      }}
+                      className="bg-[#0d9488] text-white text-xs font-bold px-4 py-1.5 rounded-xl active:scale-95 transition-transform touch-manipulation cursor-pointer hover:bg-[#0f766e]"
+                    >
+                      Book Now
+                    </button>
                   </div>
                 </div>
               );
@@ -1491,3 +1665,4 @@ export function BrowseScreen({
     </div>
   );
 }
+

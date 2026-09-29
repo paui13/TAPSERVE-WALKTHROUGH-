@@ -263,17 +263,24 @@ export default function App() {
     AppStorage.saveUser(updatedUser);
   };
 
-  const handleSwitchToProviderMode = () => {
+  const handleSwitchToProviderMode = (providerId?: string) => {
     AppStorage.saveActiveRole("provider");
-    // Ensure active provider matches user or first provider
+    setViewMode("mobile");
+    if (providerId) {
+      const match = providers.find((p) => p.id === providerId);
+      if (match) setSelectedProvider(match);
+    } else if (!selectedProvider || !selectedProvider.id) {
+      setSelectedProvider(providers[0] || INITIAL_PROVIDERS[0]);
+    }
     navigate("provider-dashboard");
-    showToast("Switched to Service Provider Mode.");
+    showToast(`Switched to Provider Mode: ${selectedProvider?.name || providers[0]?.name}`);
   };
 
   const handleSwitchToUserMode = () => {
     AppStorage.saveActiveRole("user");
+    setViewMode("mobile");
     navigate("home");
-    showToast("Returned to User Mode.");
+    showToast("Returned to Customer App Mode.");
   };
 
   const handleAcceptBooking = (bookingId: string) => {
@@ -470,6 +477,7 @@ export default function App() {
             nav={navigate}
             goBack={goBack}
             categories={categories}
+            providers={providers}
             onSelectCategory={(catId) => setSelectedCategoryId(catId)}
           />
         );
@@ -694,6 +702,8 @@ export default function App() {
             nav={navigate}
             goBack={goBack}
             provider={selectedProvider}
+            providers={providers}
+            onSelectProvider={(p) => setSelectedProvider(p)}
             bookings={bookings}
             onSwitchToUserMode={handleSwitchToUserMode}
           />
@@ -762,8 +772,41 @@ export default function App() {
   if (viewMode === "admin") {
     return (
       <div className="relative w-screen h-screen overflow-hidden">
+        {/* Top Floating View Switcher Bar */}
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/80 shadow-2xl">
+          <span className="text-[11px] font-semibold text-slate-400 mr-1 hidden sm:inline">Role:</span>
+          <button
+            onClick={() => {
+              setViewMode("mobile");
+              navigate("home");
+            }}
+            className="px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer"
+          >
+            <span>📱</span>
+            <span>Customer App</span>
+          </button>
+          <button
+            onClick={() => handleSwitchToProviderMode()}
+            className="px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer"
+          >
+            <span>👷</span>
+            <span>Provider Mode</span>
+          </button>
+          <button
+            onClick={() => handleToggleViewMode("admin")}
+            className="px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 bg-[#0d9488] text-white shadow-xs cursor-pointer"
+          >
+            <span>💻</span>
+            <span>Admin Portal</span>
+          </button>
+        </div>
+
         <AdminPortal
-          onSwitchToMobile={() => handleToggleViewMode("mobile")}
+          onSwitchToMobile={() => {
+            setViewMode("mobile");
+            navigate("home");
+          }}
+          onSwitchToProvider={() => handleSwitchToProviderMode()}
           onToast={showToast}
         />
         {/* Global Toast Overlay */}
@@ -782,21 +825,47 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center sm:p-4 select-none relative">
       {/* Top Floating View Switcher Bar */}
-      <div className="fixed top-3 z-50 flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/80 shadow-2xl">
-        <span className="text-[11px] font-semibold text-slate-400 mr-1">View:</span>
+      <div className="fixed top-3 z-50 flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/80 shadow-2xl">
+        <span className="text-[11px] font-semibold text-slate-400 mr-1 hidden sm:inline">Role:</span>
         <button
-          onClick={() => handleToggleViewMode("mobile")}
-          className="px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 bg-[#0d9488] text-white shadow-xs cursor-pointer"
+          onClick={() => {
+            setViewMode("mobile");
+            if (currentScreen.startsWith("provider-")) {
+              navigate("home");
+            }
+          }}
+          className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            viewMode === "mobile" && !currentScreen.startsWith("provider-")
+              ? "bg-[#0d9488] text-white shadow-xs"
+              : "text-slate-300 hover:text-white hover:bg-slate-800"
+          }`}
         >
           <span>📱</span>
-          <span>Mobile App</span>
+          <span>Customer App</span>
         </button>
+
+        <button
+          onClick={() => handleSwitchToProviderMode()}
+          className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            viewMode === "mobile" && currentScreen.startsWith("provider-")
+              ? "bg-[#0d9488] text-white shadow-xs ring-2 ring-[#0d9488]/30 font-bold"
+              : "text-slate-300 hover:text-white hover:bg-slate-800"
+          }`}
+        >
+          <span>👷</span>
+          <span>Provider Mode</span>
+        </button>
+
         <button
           onClick={() => handleToggleViewMode("admin")}
-          className="px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer"
+          className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            viewMode === "admin"
+              ? "bg-[#0d9488] text-white shadow-xs"
+              : "text-slate-300 hover:text-white hover:bg-slate-800"
+          }`}
         >
           <span>💻</span>
-          <span>Admin Web Portal</span>
+          <span>Admin Portal</span>
         </button>
       </div>
 

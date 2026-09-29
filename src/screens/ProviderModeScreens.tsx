@@ -1,6 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Screen } from "../types";
-import { ProviderBottomNav, TappyAvatar, A } from "../components/SharedUI";
+import {
+  ProviderBottomNav,
+  A,
+  TapServeLogo,
+  TapServeIcon,
+  FloatingAIButton,
+  TappyAvatar,
+  TappyIcon,
+} from "../components/SharedUI";
 import {
   Booking,
   BookingStatus,
@@ -10,7 +18,3641 @@ import {
   AppStorage,
 } from "../data/mockData";
 
-// ─── Provider Application Flow ───────────────────────────────────────────────
+// ─── THEME CONSTANTS ───────────────────────────────────────────────────────────
+const THEME = {
+  primary: "#115E59", // Teal-800
+  secondary: "#0F766E", // Teal-700
+  accent: "#14B8A6", // Teal-500
+  bg: "#F8FAFA",
+  card: "#FFFFFF",
+  textMain: "#1F2937",
+  textSub: "#6B7280",
+  border: "#E5E7EB",
+  success: "#16A34A",
+  warning: "#F59E0B",
+  error: "#DC2626",
+};
+
+// ─── DEMO DATA DEFAULTS ────────────────────────────────────────────────────────
+interface ProviderServiceItem {
+  id: string;
+  name: string;
+  category: string;
+  startingPrice: number;
+  duration: string;
+  status: "Active" | "Inactive";
+  description: string;
+}
+
+const INITIAL_SERVICES: ProviderServiceItem[] = [
+  {
+    id: "srv-1",
+    name: "House Cleaning",
+    category: "Cleaning",
+    startingPrice: 500,
+    duration: "2 hours",
+    status: "Active",
+    description: "Standard room swept, mopped, dusted, and kitchen sanitized.",
+  },
+  {
+    id: "srv-2",
+    name: "Deep Cleaning & Disinfection",
+    category: "Cleaning",
+    startingPrice: 1200,
+    duration: "3.5 hours",
+    status: "Active",
+    description: "Heavy grime removal, antibacterial steam, and tile scrub.",
+  },
+  {
+    id: "srv-3",
+    name: "Move-in / Move-out Cleaning",
+    category: "Cleaning",
+    startingPrice: 1800,
+    duration: "4 hours",
+    status: "Active",
+    description: "Comprehensive home turnover sanitizing before key handover.",
+  },
+];
+
+interface ChatMessage {
+  id: string;
+  sender: "customer" | "provider";
+  text: string;
+  time: string;
+}
+
+interface ChatConversation {
+  id: string;
+  clientName: string;
+  serviceTitle: string;
+  bookingId: string;
+  avatarBg: string;
+  lastMessage: string;
+  time: string;
+  unreadCount: number;
+  messages: ChatMessage[];
+}
+
+const INITIAL_CONVERSATIONS: ChatConversation[] = [
+  {
+    id: "conv-1",
+    clientName: "Juan Dela Cruz",
+    serviceTitle: "House Cleaning",
+    bookingId: "TS-1024",
+    avatarBg: "bg-teal-600",
+    lastMessage: "Thank you, see you tomorrow at 10:30 AM!",
+    time: "2m ago",
+    unreadCount: 2,
+    messages: [
+      { id: "m1", sender: "customer", text: "Hello! Confirming our booking for tomorrow morning.", time: "10:14 AM" },
+      { id: "m2", sender: "provider", text: "Yes, I will be there at 10:30 AM sharp with all cleaning equipment.", time: "10:16 AM" },
+      { id: "m3", sender: "customer", text: "Thank you, see you tomorrow at 10:30 AM!", time: "10:18 AM" },
+    ],
+  },
+  {
+    id: "conv-2",
+    clientName: "Angela Reyes",
+    serviceTitle: "Deep Cleaning",
+    bookingId: "TS-1029",
+    avatarBg: "bg-purple-600",
+    lastMessage: "Can you bring extra disinfectant for the pet area?",
+    time: "1h ago",
+    unreadCount: 1,
+    messages: [
+      { id: "m4", sender: "customer", text: "Hi Angela here! Just sent a booking request.", time: "9:10 AM" },
+      { id: "m5", sender: "customer", text: "Can you bring extra disinfectant for the pet area?", time: "9:12 AM" },
+    ],
+  },
+  {
+    id: "conv-3",
+    clientName: "Miguel Santos",
+    serviceTitle: "Home Sanitizing",
+    bookingId: "TS-1018",
+    avatarBg: "bg-blue-600",
+    lastMessage: "Salamat Kuya! Napaka-linis ng condo.",
+    time: "Yesterday",
+    unreadCount: 0,
+    messages: [
+      { id: "m6", sender: "provider", text: "Completed the deep clean of the living room and bathrooms.", time: "4:30 PM" },
+      { id: "m7", sender: "customer", text: "Salamat Kuya! Napaka-linis ng condo.", time: "4:45 PM" },
+    ],
+  },
+];
+
+interface NotificationItem {
+  id: string;
+  category: "Bookings" | "Messages" | "System";
+  title: string;
+  description: string;
+  time: string;
+  read: boolean;
+  icon: string;
+}
+
+const INITIAL_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: "notif-1",
+    category: "Bookings",
+    title: "New booking request received",
+    description: "Angela Reyes requested House Cleaning for Tomorrow at 9:00 AM.",
+    time: "15m ago",
+    read: false,
+    icon: "📋",
+  },
+  {
+    id: "notif-2",
+    category: "Bookings",
+    title: "Upcoming booking reminder",
+    description: "Your booking with Juan Dela Cruz starts in 1 hour in San Pablo City.",
+    time: "1h ago",
+    read: false,
+    icon: "⏰",
+  },
+  {
+    id: "notif-3",
+    category: "Messages",
+    title: "New customer message",
+    description: "Juan Dela Cruz: 'Thank you, see you tomorrow at 10:30 AM!'",
+    time: "2m ago",
+    read: false,
+    icon: "💬",
+  },
+  {
+    id: "notif-4",
+    category: "System",
+    title: "Credentials Approved",
+    description: "Your Philippine ID and TESDA credentials were authenticated by Admin.",
+    time: "1d ago",
+    read: true,
+    icon: "✓",
+  },
+  {
+    id: "notif-5",
+    category: "System",
+    title: "Customer left a 5-star review",
+    description: "Sonia Mercado rated your plumbing repair 5.0 stars.",
+    time: "2d ago",
+    read: true,
+    icon: "⭐",
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN SERVICE PROVIDER DASHBOARD (The 5-Tab Marketplace Hub)
+// ─────────────────────────────────────────────────────────────────────────────
+export function ProviderDashboardScreen({
+  nav,
+  goBack,
+  provider,
+  providers = [],
+  onSelectProvider,
+  bookings,
+  onSwitchToUserMode,
+}: {
+  nav: (s: Screen) => void;
+  goBack: () => void;
+  provider: Provider;
+  providers?: Provider[];
+  onSelectProvider?: (p: Provider) => void;
+  bookings: Booking[];
+  onSwitchToUserMode: () => void;
+}) {
+  // Navigation tabs: Home | Jobs | Bookings | Messages | Profile
+  const [activeTab, setActiveTab] = useState<"home" | "jobs" | "bookings" | "messages" | "profile">("home");
+
+  // Availability & Vacation Mode State
+  const [isAvailable, setIsAvailable] = useState<boolean>(provider.isAcceptingBookings ?? true);
+  const [vacationMode, setVacationMode] = useState<boolean>(false);
+
+  // Local interactive jobs / bookings state
+  const [localBookings, setLocalBookings] = useState<Booking[]>(() => {
+    // If no provider bookings exist, seed realistic Philippine capstone records
+    const existing = bookings.filter((b) => b.providerId === provider.id);
+    if (existing.length >= 2) return existing;
+
+    const seedJobs: Booking[] = [
+      {
+        id: "TS-1024",
+        providerId: provider.id,
+        providerName: provider.name,
+        providerPhoto: provider.photo,
+        serviceCategory: provider.category,
+        serviceDetail: `${provider.category} Service & Maintenance`,
+        date: "Today, Oct 12",
+        time: "10:30 AM",
+        address: "124 Rizal St., Brgy. San Roque, San Pablo City, Laguna",
+        clientName: "Juan Dela Cruz",
+        clientPhone: "+63 917 882 1432",
+        problemDescription: "Standard maintenance checkup, please ring front gate doorbell.",
+        urgencyLevel: "Medium",
+        estimatedCost: 850,
+        paymentMethod: "Cash Payment",
+        status: "Accepted",
+        createdAt: "2026-10-11",
+      },
+      {
+        id: "TS-1029",
+        providerId: provider.id,
+        providerName: provider.name,
+        providerPhoto: provider.photo,
+        serviceCategory: provider.category,
+        serviceDetail: `Comprehensive ${provider.category} Session`,
+        date: "Tomorrow, Oct 13",
+        time: "9:00 AM",
+        address: "Blk 4 Lot 12 Villa San Pablo, Laguna",
+        clientName: "Angela Reyes",
+        clientPhone: "+63 920 334 9912",
+        problemDescription: "Special attention to pet areas and disinfection of tiled floors.",
+        urgencyLevel: "High",
+        estimatedCost: 900,
+        paymentMethod: "Cash Payment",
+        status: "Pending",
+        createdAt: "2026-10-12",
+      },
+      {
+        id: "TS-1033",
+        providerId: provider.id,
+        providerName: provider.name,
+        providerPhoto: provider.photo,
+        serviceCategory: provider.category,
+        serviceDetail: "Urgent Diagnostic & Repairs",
+        date: "Wed, Oct 14",
+        time: "1:00 PM",
+        address: "Brgy. Concepcion, San Pablo City, Laguna",
+        clientName: "Miguel Santos",
+        clientPhone: "+63 918 554 1209",
+        problemDescription: "Needs immediate on-site inspection for leak pressure issues.",
+        urgencyLevel: "High",
+        estimatedCost: 1200,
+        paymentMethod: "Cash Payment",
+        status: "Pending",
+        createdAt: "2026-10-12",
+      },
+      {
+        id: "TS-1018",
+        providerId: provider.id,
+        providerName: provider.name,
+        providerPhoto: provider.photo,
+        serviceCategory: provider.category,
+        serviceDetail: `General ${provider.category}`,
+        date: "Yesterday, Oct 11",
+        time: "3:00 PM",
+        address: "Mabini St., Brgy. IV-A, San Pablo City",
+        clientName: "Sonia Mercado",
+        clientPhone: "+63 919 778 2211",
+        problemDescription: "Service was completed cleanly. Client praised prompt arrival.",
+        urgencyLevel: "Low",
+        estimatedCost: 1400,
+        paymentMethod: "Cash Payment",
+        status: "Completed",
+        createdAt: "2026-10-11",
+      },
+    ];
+    return [...existing, ...seedJobs];
+  });
+
+  // Active sub-views & modals
+  const [selectedJobDetails, setSelectedJobDetails] = useState<Booking | null>(null);
+  const [jobToCancel, setJobToCancel] = useState<Booking | null>(null);
+  const [cancelReason, setCancelReason] = useState<string>("Schedule Conflict");
+  const [completedCelebration, setCompletedCelebration] = useState<Booking | null>(null);
+  const [activeSubView, setActiveSubView] = useState<
+    | null
+    | "earnings"
+    | "services"
+    | "availability"
+    | "areas"
+    | "reviews"
+    | "performance"
+    | "verification"
+    | "standing"
+    | "support"
+    | "notifications"
+    | "ai-assistant"
+  >(null);
+
+  // Messages & Live Chat state
+  const [conversations, setConversations] = useState<ChatConversation[]>(INITIAL_CONVERSATIONS);
+  const [activeChat, setActiveChat] = useState<ChatConversation | null>(null);
+  const [chatInput, setChatInput] = useState("");
+
+  // Services list state
+  const [services, setServices] = useState<ProviderServiceItem[]>(INITIAL_SERVICES);
+  const [editingService, setEditingService] = useState<ProviderServiceItem | null>(null);
+  const [showAddService, setShowAddService] = useState(false);
+
+  // Service Areas list state
+  const [areas, setAreas] = useState<string[]>([
+    "San Pablo City (All 80 Barangays)",
+    "Calauan, Laguna",
+    "Alaminos, Laguna",
+    "Los Baños, Laguna",
+    "Bay, Laguna",
+  ]);
+  const [newAreaInput, setNewAreaInput] = useState("");
+
+  // Weekly Working Days & Hours
+  const [workingSchedule, setWorkingSchedule] = useState<{
+    days: Record<string, boolean>;
+    startTime: string;
+    endTime: string;
+  }>({
+    days: {
+      Monday: true,
+      Tuesday: true,
+      Wednesday: true,
+      Thursday: true,
+      Friday: true,
+      Saturday: true,
+      Sunday: false,
+    },
+    startTime: "8:00 AM",
+    endTime: "5:00 PM",
+  });
+
+  // Notifications state
+  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [notifCategory, setNotifCategory] = useState<"All" | "Bookings" | "Messages" | "System">("All");
+
+  // Schedule Screen Date selection
+  const [selectedScheduleDay, setSelectedScheduleDay] = useState<number>(29);
+  const [scheduleViewMode, setScheduleViewMode] = useState<"list" | "calendar">("list");
+  const [scheduleFilterTab, setScheduleFilterTab] = useState<"Today" | "Upcoming" | "Completed" | "Cancelled">("Today");
+
+  // Toast feedback state
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const triggerToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  // ─── Booking Actions ────────────────────────────────────────────────────────
+  const handleAcceptJob = (jobId: string) => {
+    setLocalBookings((prev) =>
+      prev.map((b) => (b.id === jobId ? { ...b, status: "Accepted" } : b))
+    );
+    if (selectedJobDetails?.id === jobId) {
+      setSelectedJobDetails((prev) => (prev ? { ...prev, status: "Accepted" } : null));
+    }
+    triggerToast("✓ Booking request accepted! Added to upcoming jobs.");
+  };
+
+  const handleDeclineJob = (jobId: string) => {
+    setLocalBookings((prev) =>
+      prev.map((b) => (b.id === jobId ? { ...b, status: "Cancelled", cancellationReason: "Provider Unavailable" } : b))
+    );
+    if (selectedJobDetails?.id === jobId) {
+      setSelectedJobDetails(null);
+    }
+    triggerToast("Booking request declined.");
+  };
+
+  const handleAdvanceStatus = (jobId: string, nextStatus: BookingStatus) => {
+    setLocalBookings((prev) =>
+      prev.map((b) => (b.id === jobId ? { ...b, status: nextStatus } : b))
+    );
+    if (selectedJobDetails?.id === jobId) {
+      setSelectedJobDetails((prev) => (prev ? { ...prev, status: nextStatus } : null));
+    }
+    if (nextStatus === "Completed") {
+      const match = localBookings.find((b) => b.id === jobId);
+      if (match) setCompletedCelebration(match);
+      triggerToast("🎉 Service completed! Cash payment confirmed.");
+    } else {
+      triggerToast(`Status updated to ${nextStatus}`);
+    }
+  };
+
+  const handleConfirmCancellation = () => {
+    if (!jobToCancel) return;
+    setLocalBookings((prev) =>
+      prev.map((b) =>
+        b.id === jobToCancel.id
+          ? { ...b, status: "Cancelled", cancellationReason: cancelReason }
+          : b
+      )
+    );
+    if (selectedJobDetails?.id === jobToCancel.id) {
+      setSelectedJobDetails((prev) =>
+        prev ? { ...prev, status: "Cancelled", cancellationReason: cancelReason } : null
+      );
+    }
+    setJobToCancel(null);
+    triggerToast(`Booking ${jobToCancel.id} cancelled: ${cancelReason}`);
+  };
+
+  // ─── Messaging Actions ───────────────────────────────────────────────────────
+  const handleSendMessage = () => {
+    if (!chatInput.trim() || !activeChat) return;
+    const newMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      sender: "provider",
+      text: chatInput.trim(),
+      time: "Just now",
+    };
+    const updatedMessages = [...activeChat.messages, newMsg];
+    setActiveChat({
+      ...activeChat,
+      messages: updatedMessages,
+      lastMessage: newMsg.text,
+      time: "Just now",
+    });
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === activeChat.id
+          ? { ...c, messages: updatedMessages, lastMessage: newMsg.text, time: "Just now" }
+          : c
+      )
+    );
+    setChatInput("");
+  };
+
+  const handleQuickReply = (text: string) => {
+    if (!activeChat) return;
+    const newMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      sender: "provider",
+      text,
+      time: "Just now",
+    };
+    const updatedMessages = [...activeChat.messages, newMsg];
+    setActiveChat({
+      ...activeChat,
+      messages: updatedMessages,
+      lastMessage: text,
+      time: "Just now",
+    });
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === activeChat.id
+          ? { ...c, messages: updatedMessages, lastMessage: text, time: "Just now" }
+          : c
+      )
+    );
+  };
+
+  // ─── Derived Counts ──────────────────────────────────────────────────────────
+  const pendingRequests = localBookings.filter((b) => b.status === "Pending");
+  const upcomingJobs = localBookings.filter(
+    (b) => b.status === "Accepted" || b.status === "On the Way" || b.status === "In Progress"
+  );
+  const completedJobs = localBookings.filter((b) => b.status === "Completed");
+  const nextBooking = upcomingJobs[0] || localBookings.find((b) => b.status === "Accepted");
+  const unreadMessagesTotal = conversations.reduce((acc, c) => acc + c.unreadCount, 0);
+  const unreadNotifsTotal = notifications.filter((n) => !n.read).length;
+
+  return (
+    <div className="bg-[#F8FAFA] text-[#1F2937] flex flex-col size-full overflow-hidden font-sans select-none relative">
+      {/* ─── TOAST NOTIFICATION OVERLAY ─── */}
+      {toastMsg && (
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[100] max-w-xs w-full px-4 animate-in fade-in slide-in-from-top-3">
+          <div className="bg-[#062E28] text-white px-4 py-2.5 rounded-2xl shadow-xl border border-[#14B8A6]/40 flex items-center justify-between text-xs font-semibold">
+            <span>{toastMsg}</span>
+            <button onClick={() => setToastMsg(null)} className="text-[#5EEAD4] ml-2 font-bold">
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── VACATION MODE WARNING BANNER ─── */}
+      {vacationMode && (
+        <div className="bg-amber-500 text-amber-950 px-4 py-1.5 text-[11px] font-bold flex items-center justify-between shrink-0 shadow-xs">
+          <div className="flex items-center gap-1.5">
+            <span>🌴</span>
+            <span>Vacation Mode Active: Profile is hidden from new client bookings</span>
+          </div>
+          <button
+            onClick={() => {
+              setVacationMode(false);
+              triggerToast("Vacation mode turned off! You are now visible to clients.");
+            }}
+            className="underline text-[10px] uppercase font-black"
+          >
+            Turn Off
+          </button>
+        </div>
+      )}
+
+      {/* ─── TOP APP HEADER (TapServe Provider Pro) ─── */}
+      <header className="bg-[#115E59] text-white px-4 pt-11 pb-3 shrink-0 flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <div className="size-10 rounded-2xl bg-white p-1 flex items-center justify-center shadow-xs shrink-0 border border-white/40">
+            <TapServeIcon size={34} />
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="text-base font-black text-white tracking-tight leading-none">TapServe</span>
+              <span className="bg-[#14B8A6] text-[#042F2E] text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md tracking-wider">
+                PRO
+              </span>
+            </div>
+            <span className="text-[10px] text-[#CCFBF1] font-medium mt-0.5">Provider Service Console</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Notifications Bell */}
+          <button
+            onClick={() => setActiveSubView("notifications")}
+            className="size-9 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 border border-white/15 flex items-center justify-center relative transition-colors cursor-pointer"
+            aria-label="View notifications"
+          >
+            <svg className="size-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {unreadNotifsTotal > 0 && (
+              <span className="absolute -top-1 -right-1 size-4 bg-[#DC2626] text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                {unreadNotifsTotal}
+              </span>
+            )}
+          </button>
+
+          {/* Specialist Avatar / Switcher */}
+          <button
+            onClick={() => setActiveTab("profile")}
+            className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/20 pl-1 pr-2.5 py-1 rounded-full cursor-pointer transition-colors"
+          >
+            <div className="size-7 rounded-full bg-[#0F766E] border border-white/40 flex items-center justify-center text-xs font-bold text-white relative">
+              {provider.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+              <span
+                className={`absolute bottom-0 right-0 size-2 rounded-full border border-white ${
+                  isAvailable && !vacationMode ? "bg-[#16A34A]" : "bg-slate-400"
+                }`}
+              />
+            </div>
+            <span className="text-xs font-semibold text-white truncate max-w-[80px]">
+              {provider.name.split(" ")[0]}
+            </span>
+          </button>
+        </div>
+      </header>
+
+      {/* ─── DYNAMIC TAB BODY CONTAINER ─── */}
+      <main className="flex-1 overflow-y-auto no-scrollbar pb-6 flex flex-col">
+        {activeTab === "home" && (
+          <ProviderHomeView
+            provider={provider}
+            isAvailable={isAvailable}
+            onToggleAvailability={() => {
+              const next = !isAvailable;
+              setIsAvailable(next);
+              triggerToast(next ? "● Available: Clients can book your service" : "○ Currently Unavailable for new bookings");
+            }}
+            vacationMode={vacationMode}
+            onOpenSubView={(v) => setActiveSubView(v)}
+            onSwitchTab={(t) => setActiveTab(t)}
+            pendingCount={pendingRequests.length}
+            todayJobsCount={upcomingJobs.length}
+            nextBooking={nextBooking}
+            pendingRequests={pendingRequests}
+            onAcceptJob={handleAcceptJob}
+            onDeclineJob={(id) => {
+              const match = localBookings.find((b) => b.id === id);
+              if (match) setJobToCancel(match);
+            }}
+            onViewJobDetails={(job) => setSelectedJobDetails(job)}
+            onStartChatWithClient={(clientName, serviceTitle, bookingId) => {
+              const existingConv = conversations.find((c) => c.clientName === clientName);
+              if (existingConv) {
+                setActiveChat(existingConv);
+              } else {
+                const newConv: ChatConversation = {
+                  id: `conv-${Date.now()}`,
+                  clientName,
+                  serviceTitle,
+                  bookingId,
+                  avatarBg: "bg-teal-600",
+                  lastMessage: "Chat started",
+                  time: "Just now",
+                  unreadCount: 0,
+                  messages: [
+                    { id: "m-start", sender: "provider", text: "Hello! I am preparing for your service.", time: "Just now" },
+                  ],
+                };
+                setConversations((prev) => [newConv, ...prev]);
+                setActiveChat(newConv);
+              }
+            }}
+          />
+        )}
+
+        {activeTab === "jobs" && (
+          <ProviderJobsView
+            bookings={localBookings}
+            onAcceptJob={handleAcceptJob}
+            onDeclineJob={(id) => {
+              const match = localBookings.find((b) => b.id === id);
+              if (match) setJobToCancel(match);
+            }}
+            onAdvanceStatus={handleAdvanceStatus}
+            onViewDetails={(job) => setSelectedJobDetails(job)}
+            onOpenChat={(job) => {
+              const match = conversations.find((c) => c.clientName === job.clientName) || conversations[0];
+              setActiveChat(match);
+            }}
+          />
+        )}
+
+        {activeTab === "bookings" && (
+          <ProviderBookingsScheduleView
+            bookings={localBookings}
+            selectedDate={selectedScheduleDay}
+            onSelectDate={setSelectedScheduleDay}
+            viewMode={scheduleViewMode}
+            onToggleViewMode={setScheduleViewMode}
+            filterTab={scheduleFilterTab}
+            onSelectFilterTab={setScheduleFilterTab}
+            onViewDetails={(job) => setSelectedJobDetails(job)}
+            onAdvanceStatus={handleAdvanceStatus}
+          />
+        )}
+
+        {activeTab === "messages" && (
+          <ProviderMessagesListView
+            conversations={conversations}
+            onOpenConversation={(conv) => {
+              // Clear unread count on open
+              setConversations((prev) =>
+                prev.map((c) => (c.id === conv.id ? { ...c, unreadCount: 0 } : c))
+              );
+              setActiveChat({ ...conv, unreadCount: 0 });
+            }}
+          />
+        )}
+
+        {activeTab === "profile" && (
+          <ProviderProfileView
+            provider={provider}
+            providers={providers}
+            onSelectProvider={onSelectProvider}
+            onSwitchToUserMode={onSwitchToUserMode}
+            onOpenSubView={(v) => setActiveSubView(v)}
+            servicesCount={services.length}
+            isAvailable={isAvailable}
+            vacationMode={vacationMode}
+          />
+        )}
+      </main>
+
+      {/* ─── SUB-VIEW SLIDE-OVER / MODAL DRAWERS ─── */}
+      {/* 1. Job Details Modal */}
+      {selectedJobDetails && (
+        <JobDetailsModal
+          job={selectedJobDetails}
+          onClose={() => setSelectedJobDetails(null)}
+          onAccept={() => handleAcceptJob(selectedJobDetails.id)}
+          onDecline={() => {
+            setJobToCancel(selectedJobDetails);
+            setSelectedJobDetails(null);
+          }}
+          onAdvanceStatus={(next) => handleAdvanceStatus(selectedJobDetails.id, next)}
+          onOpenChat={() => {
+            const match = conversations.find((c) => c.clientName === selectedJobDetails.clientName) || conversations[0];
+            setActiveChat(match);
+            setSelectedJobDetails(null);
+          }}
+          onCancelPrompt={() => {
+            setJobToCancel(selectedJobDetails);
+          }}
+          onToast={triggerToast}
+        />
+      )}
+
+      {/* 2. Interactive Live Chat Modal */}
+      {activeChat && (
+        <ProviderChatModal
+          conversation={activeChat}
+          onClose={() => setActiveChat(null)}
+          messageInput={chatInput}
+          onChangeInput={setChatInput}
+          onSend={handleSendMessage}
+          onQuickReply={handleQuickReply}
+          onToast={triggerToast}
+        />
+      )}
+
+      {/* 3. Cancellation Confirmation Modal */}
+      {jobToCancel && (
+        <CancellationConfirmModal
+          job={jobToCancel}
+          reason={cancelReason}
+          onChangeReason={setCancelReason}
+          onConfirm={handleConfirmCancellation}
+          onClose={() => setJobToCancel(null)}
+        />
+      )}
+
+      {/* 4. Service Completion Celebration Modal */}
+      {completedCelebration && (
+        <JobCompletedCelebrationModal
+          job={completedCelebration}
+          onClose={() => setCompletedCelebration(null)}
+          onToast={triggerToast}
+        />
+      )}
+
+      {/* 5. Sub-Views: Earnings */}
+      {activeSubView === "earnings" && (
+        <ProviderEarningsModal
+          onClose={() => setActiveSubView(null)}
+          completedJobs={completedJobs}
+          onToast={triggerToast}
+        />
+      )}
+
+      {/* 6. Sub-Views: My Services */}
+      {activeSubView === "services" && (
+        <ProviderServicesManagementModal
+          services={services}
+          onClose={() => setActiveSubView(null)}
+          onToggleStatus={(id) => {
+            setServices((prev) =>
+              prev.map((s) => (s.id === id ? { ...s, status: s.status === "Active" ? "Inactive" : "Active" } : s))
+            );
+            triggerToast("Service status updated");
+          }}
+          onEditService={(srv) => setEditingService(srv)}
+          onOpenAdd={() => setShowAddService(true)}
+        />
+      )}
+
+      {/* 7. Sub-Views: Availability & Vacation Mode */}
+      {activeSubView === "availability" && (
+        <ProviderAvailabilityModal
+          schedule={workingSchedule}
+          onSaveSchedule={(sched) => {
+            setWorkingSchedule(sched);
+            triggerToast("Weekly schedule saved!");
+            setActiveSubView(null);
+          }}
+          vacationMode={vacationMode}
+          onToggleVacation={(v) => {
+            setVacationMode(v);
+            triggerToast(v ? "Vacation mode enabled" : "Vacation mode disabled");
+          }}
+          onClose={() => setActiveSubView(null)}
+        />
+      )}
+
+      {/* 8. Sub-Views: Service Areas */}
+      {activeSubView === "areas" && (
+        <ProviderServiceAreasModal
+          areas={areas}
+          newAreaInput={newAreaInput}
+          onChangeInput={setNewAreaInput}
+          onAddArea={() => {
+            if (!newAreaInput.trim()) return;
+            setAreas((prev) => [...prev, newAreaInput.trim()]);
+            setNewAreaInput("");
+            triggerToast("New service area added!");
+          }}
+          onRemoveArea={(a) => {
+            setAreas((prev) => prev.filter((item) => item !== a));
+            triggerToast(`Removed ${a}`);
+          }}
+          onClose={() => setActiveSubView(null)}
+        />
+      )}
+
+      {/* 9. Sub-Views: Ratings & Reviews */}
+      {activeSubView === "reviews" && (
+        <ProviderReviewsModal
+          provider={provider}
+          onClose={() => setActiveSubView(null)}
+        />
+      )}
+
+      {/* 10. Sub-Views: Performance */}
+      {activeSubView === "performance" && (
+        <ProviderPerformanceModal
+          provider={provider}
+          onClose={() => setActiveSubView(null)}
+        />
+      )}
+
+      {/* 11. Sub-Views: Provider Verification */}
+      {activeSubView === "verification" && (
+        <ProviderVerificationModal
+          onClose={() => setActiveSubView(null)}
+        />
+      )}
+
+      {/* 12. Sub-Views: Account Standing */}
+      {activeSubView === "standing" && (
+        <ProviderAccountStandingModal
+          onClose={() => setActiveSubView(null)}
+        />
+      )}
+
+      {/* 13. Sub-Views: Help & Support */}
+      {activeSubView === "support" && (
+        <ProviderHelpSupportModal
+          onClose={() => setActiveSubView(null)}
+          onOpenAI={() => setActiveSubView("ai-assistant")}
+          onToast={triggerToast}
+        />
+      )}
+
+      {/* 14. Sub-Views: Notifications Drawer */}
+      {activeSubView === "notifications" && (
+        <ProviderNotificationsModal
+          notifications={notifications}
+          category={notifCategory}
+          onSelectCategory={setNotifCategory}
+          onMarkRead={(id) => {
+            setNotifications((prev) =>
+              prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+            );
+          }}
+          onMarkAllRead={() => {
+            setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+            triggerToast("All notifications marked as read");
+          }}
+          onClose={() => setActiveSubView(null)}
+        />
+      )}
+
+      {/* 15. Add/Edit Service Modal */}
+      {(showAddService || editingService) && (
+        <AddEditServiceModal
+          initial={editingService}
+          onSave={(srv) => {
+            if (editingService) {
+              setServices((prev) => prev.map((s) => (s.id === srv.id ? srv : s)));
+              triggerToast(`Updated ${srv.name}`);
+            } else {
+              setServices((prev) => [...prev, srv]);
+              triggerToast(`Added ${srv.name}`);
+            }
+            setShowAddService(false);
+            setEditingService(null);
+          }}
+          onClose={() => {
+            setShowAddService(false);
+            setEditingService(null);
+          }}
+        />
+      )}
+
+      {/* 16. Sub-Views: Provider AI Assistant Modal (Tappy Copilot) */}
+      {activeSubView === "ai-assistant" && (
+        <ProviderAIAssistantModal
+          provider={provider}
+          onClose={() => setActiveSubView(null)}
+          onOpenSubView={(v) => setActiveSubView(v)}
+          onToast={triggerToast}
+        />
+      )}
+
+      {/* ─── FLOATING AI ASSISTANT BUTTON (Tappy) ─── */}
+      <FloatingAIButton onClick={() => setActiveSubView("ai-assistant")} />
+
+      {/* ─── BOTTOM MARKETPLACE NAVIGATION (5 Tabs) ─── */}
+      <ProviderBottomNav
+        active={activeTab}
+        requestCount={pendingRequests.length}
+        unreadMessagesCount={unreadMessagesTotal}
+        onSelectTab={(tab) => {
+          setActiveTab(tab);
+          // Close sub-views when switching tabs
+          setActiveSubView(null);
+        }}
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. PROVIDER HOME VIEW COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderHomeView({
+  provider,
+  isAvailable,
+  onToggleAvailability,
+  vacationMode,
+  onOpenSubView,
+  onSwitchTab,
+  pendingCount,
+  todayJobsCount,
+  nextBooking,
+  pendingRequests,
+  onAcceptJob,
+  onDeclineJob,
+  onViewJobDetails,
+  onStartChatWithClient,
+}: {
+  provider: Provider;
+  isAvailable: boolean;
+  onToggleAvailability: () => void;
+  vacationMode: boolean;
+  onOpenSubView: (view: any) => void;
+  onSwitchTab: (tab: any) => void;
+  pendingCount: number;
+  todayJobsCount: number;
+  nextBooking?: Booking;
+  pendingRequests: Booking[];
+  onAcceptJob: (id: string) => void;
+  onDeclineJob: (id: string) => void;
+  onViewJobDetails: (job: Booking) => void;
+  onStartChatWithClient: (name: string, service: string, id: string) => void;
+}) {
+  const firstName = provider.name.split(" ")[0] || "Maria";
+
+  return (
+    <div className="p-4 flex flex-col gap-4">
+      {/* ── Top Greeting Card ── */}
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-xs flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="size-11 rounded-2xl bg-white border border-teal-100 p-1 flex items-center justify-center shadow-xs shrink-0">
+            <TapServeIcon size={36} />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs text-[#6B7280] font-medium">Good morning,</span>
+            <h2 className="text-base font-bold text-[#1F2937] tracking-tight">{firstName} 👋</h2>
+            <p className="text-[11px] text-[#0F766E] font-semibold mt-0.5">
+              Ready for your next booking?
+            </p>
+          </div>
+        </div>
+
+        {/* Availability Toggle */}
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-[11px] font-bold ${
+                isAvailable && !vacationMode ? "text-[#16A34A]" : "text-[#6B7280]"
+              }`}
+            >
+              {isAvailable && !vacationMode ? "Available" : "Unavailable"}
+            </span>
+            <button
+              onClick={onToggleAvailability}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                isAvailable && !vacationMode ? "bg-[#115E59]" : "bg-slate-300"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                  isAvailable && !vacationMode ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+          <span className="text-[10px] text-[#6B7280]">
+            {isAvailable && !vacationMode
+              ? "● Accepting new bookings"
+              : "○ Not accepting bookings"}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Compact Provider Summary KPIs ── */}
+      <div className="grid grid-cols-4 gap-2">
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-2.5 flex flex-col items-center text-center shadow-2xs">
+          <span className="text-base font-bold text-[#1F2937]">{todayJobsCount}</span>
+          <span className="text-[10px] text-[#6B7280] font-medium leading-tight mt-0.5">
+            Today&apos;s Jobs
+          </span>
+        </div>
+
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-2.5 flex flex-col items-center text-center shadow-2xs relative">
+          <span className="text-base font-bold text-[#0F766E]">{pendingCount}</span>
+          <span className="text-[10px] text-[#6B7280] font-medium leading-tight mt-0.5">
+            Pending
+          </span>
+          {pendingCount > 0 && (
+            <span className="size-2 rounded-full bg-amber-500 absolute top-2 right-2 animate-ping" />
+          )}
+        </div>
+
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-2.5 flex flex-col items-center text-center shadow-2xs">
+          <span className="text-base font-bold text-[#16A34A]">₱2,450</span>
+          <span className="text-[10px] text-[#6B7280] font-medium leading-tight mt-0.5">
+            Earnings Today
+          </span>
+        </div>
+
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-2.5 flex flex-col items-center text-center shadow-2xs">
+          <span className="text-base font-bold text-amber-600 flex items-center gap-0.5">
+            <span>4.8</span>
+            <span className="text-xs">★</span>
+          </span>
+          <span className="text-[10px] text-[#6B7280] font-medium leading-tight mt-0.5">
+            Rating
+          </span>
+        </div>
+      </div>
+
+      {/* ── Next Booking Hero Card (Prominent Focus Point) ── */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-[#1F2937] uppercase tracking-wider flex items-center gap-1.5">
+            <span className="text-teal-600">⚡</span> Next Booking
+          </span>
+          <span className="text-[10px] font-bold text-[#0F766E] bg-[#CCFBF1] px-2 py-0.5 rounded-full border border-[#99F6E4]">
+            Confirmed
+          </span>
+        </div>
+
+        {nextBooking ? (
+          <div className="bg-white border-2 border-[#115E59]/30 rounded-2xl p-4 shadow-sm flex flex-col gap-3 relative overflow-hidden">
+            {/* Top decorative stripe */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-[#115E59]" />
+
+            <div className="flex items-start justify-between">
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-[#1F2937]">
+                  {nextBooking.serviceDetail || "House Cleaning"}
+                </span>
+                <span className="text-xs text-[#0F766E] font-semibold mt-0.5">
+                  Client: {nextBooking.clientName}
+                </span>
+                <span className="text-[11px] text-[#6B7280] mt-0.5 flex items-center gap-1">
+                  <span>📍</span>
+                  <span className="truncate max-w-[200px]">{nextBooking.address}</span>
+                </span>
+              </div>
+
+              <div className="text-right">
+                <span className="text-base font-black text-[#115E59] block">
+                  ₱{nextBooking.estimatedCost || 850}
+                </span>
+                <span className="text-[9px] text-[#6B7280] uppercase tracking-wider">
+                  Cash on Service
+                </span>
+              </div>
+            </div>
+
+            {/* Time schedule chip */}
+            <div className="bg-[#F8FAFA] border border-[#E5E7EB] px-3 py-1.5 rounded-xl flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1.5 text-[#1F2937] font-semibold">
+                <span>📅</span>
+                <span>{nextBooking.date}</span>
+                <span>•</span>
+                <span className="text-[#0F766E]">{nextBooking.time}</span>
+              </div>
+              <span className="text-[10px] text-[#16A34A] font-bold">In 45 mins</span>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-3 gap-1.5 pt-1">
+              <button
+                onClick={() => onViewJobDetails(nextBooking)}
+                className="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#1F2937] text-xs font-bold transition-colors cursor-pointer text-center"
+              >
+                Details
+              </button>
+              <button
+                onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(nextBooking.address)}`, "_blank")}
+                className="py-2 px-2 rounded-xl border border-[#115E59]/30 text-[#115E59] text-xs font-bold hover:bg-teal-50 transition-colors cursor-pointer text-center"
+              >
+                Directions
+              </button>
+              <button
+                onClick={() => onStartChatWithClient(nextBooking.clientName, nextBooking.serviceDetail, nextBooking.id)}
+                className="py-2 px-2 rounded-xl bg-[#115E59] hover:bg-[#0F766E] text-white text-xs font-bold transition-colors shadow-2xs cursor-pointer text-center"
+              >
+                Message
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 text-center text-xs text-[#6B7280] shadow-xs">
+            <span className="text-2xl block mb-1">📅</span>
+            <span className="font-bold text-[#1F2937] block">No upcoming bookings right now</span>
+            <span>New customer jobs will be featured here once confirmed.</span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Quick Actions ── */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-bold text-[#1F2937] uppercase tracking-wider">
+          Quick Actions
+        </span>
+
+        <div className="grid grid-cols-5 gap-1.5">
+          <button
+            onClick={() => onSwitchTab("jobs")}
+            className="bg-white border border-[#E5E7EB] rounded-2xl p-2.5 flex flex-col items-center text-center gap-1 hover:border-[#115E59] hover:bg-teal-50/30 transition-all cursor-pointer shadow-2xs group"
+          >
+            <div className="size-9 rounded-xl bg-teal-50 text-[#115E59] flex items-center justify-center text-base group-hover:scale-110 transition-transform">
+              🧰
+            </div>
+            <span className="text-[10px] font-bold text-[#1F2937] leading-tight">Requests</span>
+          </button>
+
+          <button
+            onClick={() => onSwitchTab("bookings")}
+            className="bg-white border border-[#E5E7EB] rounded-2xl p-2.5 flex flex-col items-center text-center gap-1 hover:border-[#115E59] hover:bg-teal-50/30 transition-all cursor-pointer shadow-2xs group"
+          >
+            <div className="size-9 rounded-xl bg-teal-50 text-[#115E59] flex items-center justify-center text-base group-hover:scale-110 transition-transform">
+              📅
+            </div>
+            <span className="text-[10px] font-bold text-[#1F2937] leading-tight">Schedule</span>
+          </button>
+
+          <button
+            onClick={() => onOpenSubView("earnings")}
+            className="bg-white border border-[#E5E7EB] rounded-2xl p-2.5 flex flex-col items-center text-center gap-1 hover:border-[#115E59] hover:bg-teal-50/30 transition-all cursor-pointer shadow-2xs group"
+          >
+            <div className="size-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-base group-hover:scale-110 transition-transform">
+              💰
+            </div>
+            <span className="text-[10px] font-bold text-[#1F2937] leading-tight">Earnings</span>
+          </button>
+
+          <button
+            onClick={() => onOpenSubView("services")}
+            className="bg-white border border-[#E5E7EB] rounded-2xl p-2.5 flex flex-col items-center text-center gap-1 hover:border-[#115E59] hover:bg-teal-50/30 transition-all cursor-pointer shadow-2xs group"
+          >
+            <div className="size-9 rounded-xl bg-teal-50 text-[#115E59] flex items-center justify-center text-base group-hover:scale-110 transition-transform">
+              🛠️
+            </div>
+            <span className="text-[10px] font-bold text-[#1F2937] leading-tight">Services</span>
+          </button>
+
+          <button
+            onClick={() => onOpenSubView("performance")}
+            className="bg-white border border-[#E5E7EB] rounded-2xl p-2.5 flex flex-col items-center text-center gap-1 hover:border-[#115E59] hover:bg-teal-50/30 transition-all cursor-pointer shadow-2xs group"
+          >
+            <div className="size-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-base group-hover:scale-110 transition-transform">
+              📈
+            </div>
+            <span className="text-[10px] font-bold text-[#1F2937] leading-tight">Rating</span>
+          </button>
+        </div>
+
+        {/* Tappy AI Assistant Smart Card */}
+        <div
+          onClick={() => onOpenSubView("ai-assistant")}
+          className="bg-gradient-to-r from-[#0F766E] to-[#115E59] text-white p-3 rounded-2xl flex items-center justify-between shadow-xs cursor-pointer active:scale-98 transition-all hover:brightness-105"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="size-10 rounded-full bg-white/20 p-1 flex items-center justify-center shrink-0 border border-white/40 shadow-xs">
+              <TappyAvatar size={34} />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-white">Ask Tappy AI Copilot</span>
+                <span className="bg-[#14B8A6] text-[#042F2E] text-[9px] font-black px-1.5 py-0.2 rounded-md uppercase">PRO AI</span>
+              </div>
+              <span className="text-[10px] text-[#CCFBF1]">Tips on earnings, schedule, rates & reviews</span>
+            </div>
+          </div>
+          <span className="text-xs font-bold bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-xl border border-white/20">Chat →</span>
+        </div>
+      </div>
+
+      {/* ── New Booking Requests Section ── */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-[#1F2937] uppercase tracking-wider">
+              New Requests
+            </span>
+            <span className="size-5 rounded-full bg-[#115E59] text-white text-[10px] font-bold flex items-center justify-center">
+              {pendingRequests.length}
+            </span>
+          </div>
+
+          <button
+            onClick={() => onSwitchTab("jobs")}
+            className="text-[11px] font-bold text-[#0F766E] hover:underline cursor-pointer"
+          >
+            See all ({pendingRequests.length})
+          </button>
+        </div>
+
+        {pendingRequests.length === 0 ? (
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 text-center flex flex-col items-center gap-1 text-[#6B7280] shadow-xs">
+            <span className="text-2xl">🎉</span>
+            <span className="text-xs font-bold text-[#1F2937]">You&apos;re all caught up!</span>
+            <span className="text-[11px]">New customer booking requests will appear here immediately.</span>
+          </div>
+        ) : (
+          pendingRequests.slice(0, 2).map((req) => (
+            <div
+              key={req.id}
+              className="bg-white border border-[#E5E7EB] hover:border-[#115E59]/40 rounded-2xl p-4 shadow-xs flex flex-col gap-2.5 transition-all"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-[#1F2937]">{req.serviceDetail}</span>
+                  <span className="text-xs font-semibold text-[#0F766E]">Customer: {req.clientName}</span>
+                  <span className="text-[11px] text-[#6B7280]">
+                    {req.date} • {req.time}
+                  </span>
+                  <span className="text-[11px] text-[#6B7280] truncate max-w-[210px]">
+                    📍 {req.address}
+                  </span>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-sm font-bold text-[#115E59]">₱{req.estimatedCost}</span>
+                  <span className="text-[10px] text-[#6B7280] block">Est. 3 hrs</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 pt-1 border-t border-[#F3F4F6]">
+                <button
+                  onClick={() => onViewJobDetails(req)}
+                  className="py-1.5 px-2.5 rounded-xl text-[11px] font-bold text-[#6B7280] hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  View Details
+                </button>
+                <button
+                  onClick={() => onDeclineJob(req.id)}
+                  className="flex-1 py-1.5 rounded-xl border border-rose-200 text-rose-600 text-xs font-bold hover:bg-rose-50 transition-colors cursor-pointer"
+                >
+                  Decline
+                </button>
+                <button
+                  onClick={() => onAcceptJob(req.id)}
+                  className="flex-1 py-1.5 rounded-xl bg-[#115E59] hover:bg-[#0F766E] text-white text-xs font-bold transition-colors shadow-2xs cursor-pointer"
+                >
+                  Accept
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. PROVIDER JOBS VIEW (Tabs: Requests | Upcoming | In Progress | Completed)
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderJobsView({
+  bookings,
+  onAcceptJob,
+  onDeclineJob,
+  onAdvanceStatus,
+  onViewDetails,
+  onOpenChat,
+}: {
+  bookings: Booking[];
+  onAcceptJob: (id: string) => void;
+  onDeclineJob: (id: string) => void;
+  onAdvanceStatus: (id: string, nextStatus: BookingStatus) => void;
+  onViewDetails: (job: Booking) => void;
+  onOpenChat: (job: Booking) => void;
+}) {
+  const [subTab, setSubTab] = useState<"requests" | "upcoming" | "in-progress" | "completed">("requests");
+
+  const requests = bookings.filter((b) => b.status === "Pending");
+  const upcoming = bookings.filter((b) => b.status === "Accepted");
+  const inProgress = bookings.filter((b) => b.status === "On the Way" || b.status === "In Progress");
+  const completed = bookings.filter((b) => b.status === "Completed");
+
+  const currentList =
+    subTab === "requests"
+      ? requests
+      : subTab === "upcoming"
+      ? upcoming
+      : subTab === "in-progress"
+      ? inProgress
+      : completed;
+
+  return (
+    <div className="flex flex-col gap-3 p-4">
+      {/* ── Sub Tabs Bar ── */}
+      <div className="flex bg-[#E5E7EB]/60 p-1 rounded-2xl gap-1">
+        {[
+          { id: "requests", label: "Requests", count: requests.length },
+          { id: "upcoming", label: "Upcoming", count: upcoming.length },
+          { id: "in-progress", label: "Active", count: inProgress.length },
+          { id: "completed", label: "Completed", count: completed.length },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setSubTab(tab.id as any)}
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              subTab === tab.id
+                ? "bg-white text-[#115E59] shadow-xs"
+                : "text-[#6B7280] hover:text-[#1F2937]"
+            }`}
+          >
+            <span>{tab.label}</span>
+            {tab.count > 0 && (
+              <span
+                className={`text-[9px] font-black px-1.5 py-0.2 rounded-full ${
+                  subTab === tab.id
+                    ? "bg-[#115E59] text-white"
+                    : "bg-slate-300 text-slate-700"
+                }`}
+              >
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ── List of Jobs ── */}
+      <div className="flex flex-col gap-3">
+        {currentList.length === 0 ? (
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 text-center flex flex-col items-center gap-2 text-[#6B7280] shadow-xs my-4">
+            <span className="text-3xl">📭</span>
+            <span className="text-sm font-bold text-[#1F2937]">No jobs in this category</span>
+            <span className="text-xs">
+              {subTab === "requests"
+                ? "New client booking requests will appear here."
+                : subTab === "upcoming"
+                ? "Accept pending requests to schedule upcoming appointments."
+                : subTab === "in-progress"
+                ? "No service currently in progress."
+                : "Your completed customer jobs will be archived here."}
+            </span>
+          </div>
+        ) : (
+          currentList.map((job) => (
+            <div
+              key={job.id}
+              className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-xs flex flex-col gap-3 hover:border-[#115E59]/40 transition-all"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="size-11 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-xl shrink-0">
+                    🛠️
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-bold text-[#1F2937] leading-tight">
+                      {job.serviceDetail}
+                    </span>
+                    <span className="text-xs font-semibold text-[#0F766E] mt-0.5">
+                      {job.clientName}
+                    </span>
+                    <span className="text-[11px] text-[#6B7280]">
+                      {job.date} • {job.time}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <span className="text-sm font-black text-[#115E59] block">
+                    ₱{job.estimatedCost}
+                  </span>
+                  <span
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 border ${
+                      job.status === "Completed"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : job.status === "Pending"
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : job.status === "In Progress" || job.status === "On the Way"
+                        ? "bg-teal-50 text-teal-800 border-teal-200 animate-pulse"
+                        : "bg-blue-50 text-blue-700 border-blue-200"
+                    }`}
+                  >
+                    {job.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Location & notes */}
+              <div className="bg-[#F8FAFA] p-2.5 rounded-xl border border-[#E5E7EB] text-xs flex flex-col gap-0.5">
+                <div className="flex items-center gap-1.5 text-[#6B7280]">
+                  <span>📍</span>
+                  <span className="truncate">{job.address}</span>
+                </div>
+                {job.problemDescription && (
+                  <span className="text-[#475569] italic text-[11px] line-clamp-1 mt-0.5">
+                    &quot;{job.problemDescription}&quot;
+                  </span>
+                )}
+              </div>
+
+              {/* Status Action Buttons */}
+              <div className="flex items-center gap-2 pt-1 border-t border-[#F3F4F6]">
+                <button
+                  onClick={() => onViewDetails(job)}
+                  className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#1F2937] text-xs font-bold transition-colors cursor-pointer"
+                >
+                  View Details
+                </button>
+
+                {job.status === "Pending" && (
+                  <>
+                    <button
+                      onClick={() => onDeclineJob(job.id)}
+                      className="flex-1 py-2 rounded-xl border border-rose-200 text-rose-600 text-xs font-bold hover:bg-rose-50 transition-colors cursor-pointer"
+                    >
+                      Decline
+                    </button>
+                    <button
+                      onClick={() => onAcceptJob(job.id)}
+                      className="flex-1 py-2 rounded-xl bg-[#115E59] hover:bg-[#0F766E] text-white text-xs font-bold transition-colors shadow-2xs cursor-pointer"
+                    >
+                      Accept
+                    </button>
+                  </>
+                )}
+
+                {job.status === "Accepted" && (
+                  <>
+                    <button
+                      onClick={() => onOpenChat(job)}
+                      className="py-2 px-3 rounded-xl border border-teal-200 text-[#0F766E] text-xs font-bold hover:bg-teal-50 transition-colors cursor-pointer"
+                    >
+                      Message
+                    </button>
+                    <button
+                      onClick={() => onAdvanceStatus(job.id, "On the Way")}
+                      className="flex-1 py-2 rounded-xl bg-[#115E59] hover:bg-[#0F766E] text-white text-xs font-bold transition-colors shadow-2xs cursor-pointer"
+                    >
+                      Start: On the Way →
+                    </button>
+                  </>
+                )}
+
+                {job.status === "On the Way" && (
+                  <button
+                    onClick={() => onAdvanceStatus(job.id, "In Progress")}
+                    className="flex-1 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors shadow-2xs cursor-pointer"
+                  >
+                    I&apos;ve Arrived • Start Job
+                  </button>
+                )}
+
+                {job.status === "In Progress" && (
+                  <button
+                    onClick={() => onAdvanceStatus(job.id, "Completed")}
+                    className="flex-1 py-2 rounded-xl bg-[#16A34A] hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-2xs cursor-pointer"
+                  >
+                    Complete Service (Collect ₱{job.estimatedCost})
+                  </button>
+                )}
+
+                {job.status === "Completed" && (
+                  <div className="flex-1 text-right">
+                    <span className="text-[11px] font-bold text-[#16A34A] flex items-center justify-end gap-1">
+                      <span>✓ Cash Settled</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. PROVIDER BOOKINGS / SCHEDULE VIEW (Date Strip & Timeline)
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderBookingsScheduleView({
+  bookings,
+  selectedDate,
+  onSelectDate,
+  viewMode,
+  onToggleViewMode,
+  filterTab,
+  onSelectFilterTab,
+  onViewDetails,
+  onAdvanceStatus,
+}: {
+  bookings: Booking[];
+  selectedDate: number;
+  onSelectDate: (d: number) => void;
+  viewMode: "list" | "calendar";
+  onToggleViewMode: (v: "list" | "calendar") => void;
+  filterTab: "Today" | "Upcoming" | "Completed" | "Cancelled";
+  onSelectFilterTab: (t: any) => void;
+  onViewDetails: (b: Booking) => void;
+  onAdvanceStatus: (id: string, s: BookingStatus) => void;
+}) {
+  const daysStrip = [
+    { day: "MON", num: 28 },
+    { day: "TUE", num: 29 },
+    { day: "WED", num: 30 },
+    { day: "THU", num: 1 },
+    { day: "FRI", num: 2 },
+    { day: "SAT", num: 3 },
+    { day: "SUN", num: 4 },
+  ];
+
+  return (
+    <div className="p-4 flex flex-col gap-4">
+      {/* ── Header Bar with Schedule Controls ── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">📅</span>
+          <div>
+            <h2 className="text-base font-bold text-[#1F2937]">My Schedule</h2>
+            <span className="text-[11px] text-[#6B7280]">October 2026 • Laguna</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => onSelectDate(29)}
+            className="px-2.5 py-1 rounded-xl bg-teal-50 text-[#0F766E] border border-teal-200 text-xs font-bold hover:bg-teal-100 transition-colors cursor-pointer"
+          >
+            Today
+          </button>
+          <button
+            onClick={() => onToggleViewMode(viewMode === "list" ? "calendar" : "list")}
+            className="p-1.5 rounded-xl border border-[#E5E7EB] bg-white text-[#1F2937] hover:bg-slate-50 transition-colors cursor-pointer"
+            title="Toggle Calendar/List View"
+          >
+            {viewMode === "list" ? "📆" : "📋"}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Interactive Date Strip ── */}
+      <div className="flex items-center justify-between gap-1 overflow-x-auto no-scrollbar py-1">
+        {daysStrip.map((d) => {
+          const isSelected = d.num === selectedDate;
+          return (
+            <button
+              key={`${d.day}-${d.num}`}
+              onClick={() => onSelectDate(d.num)}
+              className={`flex-1 min-w-[42px] py-2.5 rounded-2xl flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                isSelected
+                  ? "bg-[#115E59] text-white shadow-sm ring-2 ring-[#14B8A6]/40"
+                  : "bg-white text-[#6B7280] border border-[#E5E7EB] hover:bg-slate-50"
+              }`}
+            >
+              <span className={`text-[10px] font-bold uppercase ${isSelected ? "text-[#CCFBF1]" : "text-[#9CA3AF]"}`}>
+                {d.day}
+              </span>
+              <span className="text-sm font-black leading-none">{d.num}</span>
+              <span
+                className={`size-1.5 rounded-full ${
+                  isSelected ? "bg-white" : d.num === 29 || d.num === 30 ? "bg-[#115E59]" : "bg-transparent"
+                }`}
+              />
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Status Filter Tabs ── */}
+      <div className="flex bg-[#E5E7EB]/50 p-1 rounded-xl gap-1">
+        {(["Today", "Upcoming", "Completed", "Cancelled"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => onSelectFilterTab(tab)}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              filterTab === tab
+                ? "bg-white text-[#115E59] shadow-2xs"
+                : "text-[#6B7280] hover:text-[#1F2937]"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Calendar Grid Mode (Simulated Functional Calendar) ── */}
+      {viewMode === "calendar" ? (
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-xs flex flex-col gap-3">
+          <div className="flex items-center justify-between pb-2 border-b border-[#F3F4F6] text-xs font-bold text-[#1F2937]">
+            <span>October 2026</span>
+            <div className="flex gap-2 text-[#0F766E]">
+              <span>◀</span>
+              <span>▶</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1 text-center text-xs">
+            {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+              <span key={i} className="text-[10px] font-bold text-[#9CA3AF] py-1">
+                {d}
+              </span>
+            ))}
+            {Array.from({ length: 31 }).map((_, i) => {
+              const day = i + 1;
+              const isSelected = day === selectedDate;
+              const hasJobs = day === 28 || day === 29 || day === 30 || day === 14;
+              return (
+                <button
+                  key={day}
+                  onClick={() => onSelectDate(day)}
+                  className={`size-8 rounded-xl mx-auto flex flex-col items-center justify-center text-xs font-semibold relative transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-[#115E59] text-white font-bold"
+                      : "hover:bg-slate-100 text-[#1F2937]"
+                  }`}
+                >
+                  <span>{day}</span>
+                  {hasJobs && !isSelected && (
+                    <span className="size-1 rounded-full bg-[#115E59] absolute bottom-1" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Today's Schedule Timeline Cards ── */}
+      <div className="flex flex-col gap-2">
+        <span className="text-xs font-bold text-[#1F2937] uppercase tracking-wider">
+          Scheduled Appointments
+        </span>
+
+        {bookings.length === 0 ? (
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 text-center text-xs text-[#6B7280] shadow-xs">
+            No bookings scheduled for this date.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            {bookings.slice(0, 3).map((b, idx) => (
+              <div
+                key={b.id}
+                className="bg-white border border-[#E5E7EB] hover:border-[#115E59]/40 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3 transition-all cursor-pointer"
+                onClick={() => onViewDetails(b)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-teal-50 border border-teal-100 text-[#115E59] font-bold text-xs shrink-0 w-16 text-center">
+                    <span className="text-[10px] text-[#0F766E] uppercase">TIME</span>
+                    <span className="text-xs leading-tight">{b.time.split(" ")[0]}</span>
+                    <span className="text-[9px] text-[#6B7280]">{b.time.split(" ")[1]}</span>
+                  </div>
+
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-[#1F2937] truncate">{b.serviceDetail}</span>
+                    <span className="text-[11px] text-[#0F766E] font-semibold">{b.clientName}</span>
+                    <span className="text-[10px] text-[#6B7280] truncate">📍 {b.address}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className="text-xs font-bold text-[#115E59]">₱{b.estimatedCost}</span>
+                  <span
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                      b.status === "Completed"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : b.status === "Pending"
+                        ? "bg-amber-50 text-amber-700"
+                        : "bg-teal-50 text-teal-800"
+                    }`}
+                  >
+                    {b.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. PROVIDER MESSAGES LIST VIEW
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderMessagesListView({
+  conversations,
+  onOpenConversation,
+}: {
+  conversations: ChatConversation[];
+  onOpenConversation: (conv: ChatConversation) => void;
+}) {
+  const [search, setSearch] = useState("");
+
+  const filtered = conversations.filter(
+    (c) =>
+      c.clientName.toLowerCase().includes(search.toLowerCase()) ||
+      c.serviceTitle.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="p-4 flex flex-col gap-3">
+      {/* ── Search Bar ── */}
+      <div className="relative">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search customer chats or services..."
+          className="w-full bg-white border border-[#E5E7EB] rounded-2xl pl-9 pr-4 py-2.5 text-xs text-[#1F2937] placeholder-[#9CA3AF] outline-none focus:border-[#115E59] shadow-2xs transition-colors"
+        />
+        <span className="absolute left-3 top-2.5 text-slate-400 text-sm">🔍</span>
+      </div>
+
+      {/* ── Conversation Cards List ── */}
+      <div className="flex flex-col gap-2">
+        {filtered.length === 0 ? (
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 text-center flex flex-col items-center gap-1.5 text-[#6B7280] shadow-xs my-4">
+            <span className="text-3xl">💬</span>
+            <span className="text-sm font-bold text-[#1F2937]">No conversations found</span>
+            <span className="text-xs">Incoming messages from booking clients will appear here.</span>
+          </div>
+        ) : (
+          filtered.map((conv) => (
+            <div
+              key={conv.id}
+              onClick={() => onOpenConversation(conv)}
+              className="bg-white border border-[#E5E7EB] hover:border-[#115E59]/40 rounded-2xl p-3.5 shadow-xs flex items-center justify-between gap-3 cursor-pointer transition-all hover:bg-slate-50/50"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className={`size-12 rounded-2xl text-white font-bold text-sm flex items-center justify-center shrink-0 ${conv.avatarBg}`}
+                >
+                  {conv.clientName.split(" ").map((n) => n[0]).join("")}
+                </div>
+
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#1F2937] truncate">{conv.clientName}</span>
+                    <span className="text-[10px] text-[#0F766E] font-semibold bg-teal-50 px-1.5 py-0.2 rounded">
+                      {conv.serviceTitle}
+                    </span>
+                  </div>
+                  <span className="text-xs text-[#475569] truncate mt-0.5 max-w-[210px]">
+                    {conv.lastMessage}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <span className="text-[10px] text-[#9CA3AF]">{conv.time}</span>
+                {conv.unreadCount > 0 && (
+                  <span className="size-5 rounded-full bg-[#115E59] text-white text-[10px] font-bold flex items-center justify-center shadow-2xs">
+                    {conv.unreadCount}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. PROVIDER PROFILE VIEW & MANAGEMENT MENU
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderProfileView({
+  provider,
+  providers = [],
+  onSelectProvider,
+  onSwitchToUserMode,
+  onOpenSubView,
+  servicesCount,
+  isAvailable,
+  vacationMode,
+}: {
+  provider: Provider;
+  providers?: Provider[];
+  onSelectProvider?: (p: Provider) => void;
+  onSwitchToUserMode: () => void;
+  onOpenSubView: (view: any) => void;
+  servicesCount: number;
+  isAvailable: boolean;
+  vacationMode: boolean;
+}) {
+  return (
+    <div className="p-4 flex flex-col gap-4">
+      {/* ── Top Profile Card ── */}
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs flex flex-col gap-3">
+        <div className="flex items-center gap-4">
+          <div className="size-16 rounded-2xl bg-[#0F766E] text-white text-2xl font-bold flex items-center justify-center shrink-0 shadow-inner relative overflow-hidden">
+            {provider.name.split(" ").map((n) => n[0]).join("")}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+          </div>
+
+          <div className="flex flex-col min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-base font-bold text-[#1F2937] truncate">{provider.name}</h2>
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-md shrink-0">
+                ✓ Verified
+              </span>
+            </div>
+            <span className="text-xs text-[#0F766E] font-semibold">{provider.specialization}</span>
+            <div className="flex items-center gap-2 text-xs text-[#6B7280] mt-1">
+              <span className="text-amber-500 font-bold flex items-center gap-0.5">
+                <span>⭐</span> {provider.rating}
+              </span>
+              <span>•</span>
+              <span>{provider.completedJobs || 120} completed jobs</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Pro Switcher Helper (Essential for Capstone Demo) */}
+        {providers.length > 0 && onSelectProvider && (
+          <div className="bg-[#F8FAFA] p-2.5 rounded-xl border border-[#E5E7EB] flex items-center justify-between text-xs mt-1">
+            <span className="text-[#6B7280] font-medium">Switch Specialist Demo:</span>
+            <select
+              value={provider.id}
+              onChange={(e) => {
+                const match = providers.find((p) => p.id === e.target.value);
+                if (match) onSelectProvider(match);
+              }}
+              className="bg-white border border-[#CBD5E1] rounded-lg text-xs font-semibold px-2 py-1 outline-none text-[#1F2937] cursor-pointer"
+            >
+              {providers.slice(0, 10).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.category})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* ── Profile Sections List ── */}
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#F3F4F6] text-xs">
+        {[
+          { label: "Tappy AI Business Copilot", icon: "🤖", sub: "Instant tips, schedule advice & earnings", action: () => onOpenSubView("ai-assistant") },
+          { label: "My Services & Pricing", icon: "🛠️", sub: `${servicesCount} active offerings`, action: () => onOpenSubView("services") },
+          { label: "Availability & Vacation Mode", icon: "📅", sub: vacationMode ? "Vacation Active" : "8:00 AM - 5:00 PM", action: () => onOpenSubView("availability") },
+          { label: "Service Area Coverage", icon: "📍", sub: "San Pablo City & nearby", action: () => onOpenSubView("areas") },
+          { label: "Earnings & Payouts", icon: "💰", sub: "₱12,450 available", action: () => onOpenSubView("earnings") },
+          { label: "Ratings & Client Reviews", icon: "⭐", sub: "4.8 based on 120 reviews", action: () => onOpenSubView("reviews") },
+          { label: "Performance & Quality Metrics", icon: "📈", sub: "96% completion rate", action: () => onOpenSubView("performance") },
+          { label: "Documents & Verification", icon: "📑", sub: "Government ID, TESDA verified", action: () => onOpenSubView("verification") },
+          { label: "Account Standing", icon: "🛡️", sub: "Good Standing (0 points)", action: () => onOpenSubView("standing") },
+          { label: "Help & Support Center", icon: "❓", sub: "FAQs, hotline & issue reporting", action: () => onOpenSubView("support") },
+        ].map((item, idx) => (
+          <button
+            key={idx}
+            onClick={item.action}
+            className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-slate-50 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-base">{item.icon}</span>
+              <div className="flex flex-col">
+                <span className="font-bold text-[#1F2937]">{item.label}</span>
+                <span className="text-[10px] text-[#6B7280]">{item.sub}</span>
+              </div>
+            </div>
+            <span className="text-slate-400 font-bold text-sm">→</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Switch to User App & Logout ── */}
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={onSwitchToUserMode}
+          className="w-full py-3 bg-[#115E59] hover:bg-[#0F766E] text-white text-xs font-bold rounded-2xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <span>📱</span> Switch to Customer Mode
+        </button>
+
+        <button
+          onClick={() => {
+            AppStorage.resetToDefaults();
+            window.location.reload();
+          }}
+          className="w-full py-2.5 text-xs text-[#DC2626] font-semibold hover:bg-rose-50 rounded-2xl transition-colors cursor-pointer"
+        >
+          Reset Demo Data / Logout
+        </button>
+
+        {/* Official Brand Badge */}
+        <div className="flex flex-col items-center justify-center gap-1.5 pt-4 pb-2 text-center border-t border-[#E5E7EB]/60 mt-1">
+          <div className="bg-white border border-[#E5E7EB] p-2 rounded-2xl shadow-xs">
+            <TapServeLogo size={52} />
+          </div>
+          <span className="text-xs font-bold text-[#115E59]">TapServe Provider Console</span>
+          <span className="text-[10px] text-[#9CA3AF]">Official Certified Service Platform • San Pablo City</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JOB DETAILS MODAL / SCREEN WITH PROGRESSION TIMELINE
+// ─────────────────────────────────────────────────────────────────────────────
+function JobDetailsModal({
+  job,
+  onClose,
+  onAccept,
+  onDecline,
+  onAdvanceStatus,
+  onOpenChat,
+  onCancelPrompt,
+  onToast,
+}: {
+  job: Booking;
+  onClose: () => void;
+  onAccept: () => void;
+  onDecline: () => void;
+  onAdvanceStatus: (next: BookingStatus) => void;
+  onOpenChat: () => void;
+  onCancelPrompt: () => void;
+  onToast: (msg: string) => void;
+}) {
+  const steps: BookingStatus[] = ["Pending", "Accepted", "On the Way", "In Progress", "Completed"];
+  const currentStepIdx = steps.indexOf(job.status);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-[#E5E7EB]">
+        {/* Header */}
+        <div className="bg-[#115E59] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#CCFBF1] uppercase font-bold tracking-wider">
+              Booking Ref #{job.id}
+            </span>
+            <h3 className="text-sm font-bold text-white">{job.serviceDetail}</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content Body */}
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4 text-xs">
+          {/* Booking Progress Timeline */}
+          <div className="bg-[#F8FAFA] p-3.5 rounded-2xl border border-[#E5E7EB] flex flex-col gap-2">
+            <span className="font-bold text-[#1F2937] text-[11px] uppercase tracking-wider">
+              Service Status Lifecycle
+            </span>
+            <div className="flex items-center justify-between relative mt-1">
+              <div className="absolute top-2 left-3 right-3 h-0.5 bg-slate-200 z-0" />
+              {steps.map((st, i) => {
+                const isPassed = currentStepIdx >= i;
+                const isCurrent = job.status === st;
+                return (
+                  <div key={st} className="flex flex-col items-center gap-1 z-10">
+                    <div
+                      className={`size-5 rounded-full flex items-center justify-center text-[9px] font-bold transition-all ${
+                        isCurrent
+                          ? "bg-[#115E59] text-white ring-3 ring-teal-200"
+                          : isPassed
+                          ? "bg-[#16A34A] text-white"
+                          : "bg-slate-200 text-slate-500"
+                      }`}
+                    >
+                      {isPassed && !isCurrent ? "✓" : i + 1}
+                    </div>
+                    <span className="text-[8px] font-semibold text-[#6B7280] text-center max-w-[50px] leading-tight">
+                      {st}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Customer Card */}
+          <div className="bg-white p-3 rounded-2xl border border-[#E5E7EB] flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="size-10 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-sm">
+                {job.clientName.split(" ").map((n) => n[0]).join("")}
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-[#1F2937]">{job.clientName}</span>
+                <span className="text-[#6B7280] text-[11px]">{job.clientPhone}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => window.open(`tel:${job.clientPhone}`)}
+                className="size-8 rounded-xl bg-teal-50 border border-teal-200 text-[#0F766E] flex items-center justify-center"
+                title="Call client"
+              >
+                📞
+              </button>
+              <button
+                onClick={onOpenChat}
+                className="size-8 rounded-xl bg-[#115E59] text-white flex items-center justify-center"
+                title="Message client"
+              >
+                💬
+              </button>
+            </div>
+          </div>
+
+          {/* Schedule & Price */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-[#F8FAFA] p-3 rounded-xl border border-[#E5E7EB]">
+              <span className="text-[#6B7280] block text-[10px]">Schedule</span>
+              <span className="font-bold text-[#1F2937]">{job.date}</span>
+              <span className="text-[#0F766E] block font-semibold">{job.time}</span>
+            </div>
+
+            <div className="bg-[#F8FAFA] p-3 rounded-xl border border-[#E5E7EB]">
+              <span className="text-[#6B7280] block text-[10px]">Service Fee</span>
+              <span className="text-base font-black text-[#115E59]">₱{job.estimatedCost}</span>
+              <span className="text-[#6B7280] block text-[9px]">Cash on completion</span>
+            </div>
+          </div>
+
+          {/* Address & Directions */}
+          <div className="bg-white p-3 rounded-xl border border-[#E5E7EB] flex flex-col gap-1.5">
+            <span className="font-bold text-[#1F2937] text-[11px]">Service Location</span>
+            <p className="text-[#475569] text-xs">📍 {job.address}</p>
+            <button
+              onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(job.address)}`, "_blank")}
+              className="py-1.5 px-3 rounded-lg border border-[#115E59]/30 text-[#115E59] text-xs font-bold hover:bg-teal-50 w-full text-center"
+            >
+              Open in Google Maps / Waze ↗
+            </button>
+          </div>
+
+          {/* Instructions */}
+          {job.problemDescription && (
+            <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200 flex flex-col gap-1">
+              <span className="font-bold text-amber-950 text-[11px]">Client Instructions</span>
+              <p className="text-amber-900 text-xs italic">&quot;{job.problemDescription}&quot;</p>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Action Controls Footer */}
+        <div className="p-4 bg-white border-t border-[#E5E7EB] flex flex-col gap-2 shrink-0">
+          {job.status === "Pending" && (
+            <div className="flex gap-2">
+              <button
+                onClick={onDecline}
+                className="flex-1 py-2.5 rounded-xl border border-rose-300 text-rose-600 font-bold text-xs"
+              >
+                Decline Request
+              </button>
+              <button
+                onClick={onAccept}
+                className="flex-1 py-2.5 rounded-xl bg-[#115E59] text-white font-bold text-xs shadow-xs"
+              >
+                Accept Booking
+              </button>
+            </div>
+          )}
+
+          {job.status === "Accepted" && (
+            <div className="flex flex-col gap-1.5">
+              <button
+                onClick={() => onAdvanceStatus("On the Way")}
+                className="w-full py-2.5 rounded-xl bg-[#115E59] text-white font-bold text-xs shadow-xs"
+              >
+                I&apos;m On the Way →
+              </button>
+              <button
+                onClick={onCancelPrompt}
+                className="text-center text-xs text-rose-600 font-semibold hover:underline"
+              >
+                Cancel Booking
+              </button>
+            </div>
+          )}
+
+          {job.status === "On the Way" && (
+            <button
+              onClick={() => onAdvanceStatus("In Progress")}
+              className="w-full py-2.5 rounded-xl bg-amber-600 text-white font-bold text-xs shadow-xs"
+            >
+              I&apos;ve Arrived • Start Job
+            </button>
+          )}
+
+          {job.status === "In Progress" && (
+            <button
+              onClick={() => onAdvanceStatus("Completed")}
+              className="w-full py-2.5 rounded-xl bg-[#16A34A] text-white font-bold text-xs shadow-xs"
+            >
+              Mark as Completed (Collect ₱{job.estimatedCost})
+            </button>
+          )}
+
+          {job.status === "Completed" && (
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 rounded-xl bg-[#F8FAFA] border border-[#E5E7EB] text-[#1F2937] font-bold text-xs"
+            >
+              Close Summary
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTERACTIVE LIVE CHAT MODAL WITH QUICK REPLIES
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderChatModal({
+  conversation,
+  onClose,
+  messageInput,
+  onChangeInput,
+  onSend,
+  onQuickReply,
+  onToast,
+}: {
+  conversation: ChatConversation;
+  onClose: () => void;
+  messageInput: string;
+  onChangeInput: (val: string) => void;
+  onSend: () => void;
+  onQuickReply: (text: string) => void;
+  onToast: (msg: string) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        {/* Chat Header */}
+        <div className="bg-[#115E59] text-white px-4 py-3 flex items-center justify-between shrink-0 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <button onClick={onClose} className="text-white text-base font-bold pr-1">
+              ←
+            </button>
+            <div className="size-9 rounded-full bg-teal-700 text-white font-bold flex items-center justify-center text-xs">
+              {conversation.clientName.split(" ").map((n) => n[0]).join("")}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-white">{conversation.clientName}</span>
+              <span className="text-[10px] text-[#CCFBF1]">{conversation.serviceTitle} • Ref #{conversation.bookingId}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onToast("Calling customer hotline…")}
+            className="size-8 rounded-full bg-white/15 flex items-center justify-center text-xs font-bold"
+            title="Call Client"
+          >
+            📞
+          </button>
+        </div>
+
+        {/* Chat Messages Body */}
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 bg-[#F8FAFA]">
+          <div className="text-center my-1">
+            <span className="text-[10px] text-[#9CA3AF] bg-white px-2.5 py-1 rounded-full border border-[#E5E7EB]">
+              TapServe Encrypted Client Communication
+            </span>
+          </div>
+
+          {conversation.messages.map((m) => {
+            const isMe = m.sender === "provider";
+            return (
+              <div
+                key={m.id}
+                className={`flex flex-col max-w-[80%] ${isMe ? "ml-auto items-end" : "mr-auto items-start"}`}
+              >
+                <div
+                  className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                    isMe
+                      ? "bg-[#115E59] text-white rounded-br-xs shadow-2xs"
+                      : "bg-[#F1F5F9] text-[#1F2937] rounded-bl-xs border border-[#E2E8F0]"
+                  }`}
+                >
+                  {m.text}
+                </div>
+                <span className="text-[9px] text-[#9CA3AF] mt-0.5 px-1">{m.time}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Quick Replies Bar */}
+        <div className="bg-white border-t border-[#E5E7EB] px-3 py-1.5 overflow-x-auto no-scrollbar flex items-center gap-1.5 shrink-0">
+          {[
+            "I'm on my way.",
+            "I've arrived.",
+            "I'll be there in 10 minutes.",
+            "Thank you for booking with TapServe.",
+          ].map((quick) => (
+            <button
+              key={quick}
+              onClick={() => onQuickReply(quick)}
+              className="text-[10px] whitespace-nowrap bg-teal-50 hover:bg-teal-100 text-[#0F766E] border border-teal-200 px-2.5 py-1 rounded-full font-semibold cursor-pointer"
+            >
+              {quick}
+            </button>
+          ))}
+        </div>
+
+        {/* Input Bar */}
+        <div className="p-3 bg-white border-t border-[#E5E7EB] flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => onToast("Photo upload simulated.")}
+            className="text-slate-400 hover:text-slate-600 text-lg px-1 cursor-pointer"
+            title="Upload photo"
+          >
+            📷
+          </button>
+          <input
+            type="text"
+            value={messageInput}
+            onChange={(e) => onChangeInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSend();
+            }}
+            placeholder="Type your message..."
+            className="flex-1 bg-[#F8FAFA] border border-[#E5E7EB] rounded-2xl px-3.5 py-2 text-xs outline-none focus:border-[#115E59] text-[#1F2937]"
+          />
+          <button
+            onClick={onSend}
+            disabled={!messageInput.trim()}
+            className="size-8 rounded-full bg-[#115E59] hover:bg-[#0F766E] disabled:opacity-40 text-white flex items-center justify-center font-bold text-xs shadow-xs cursor-pointer"
+          >
+            ➤
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CANCELLATION CONFIRMATION MODAL WITH REASONS & STANDING WARNING
+// ─────────────────────────────────────────────────────────────────────────────
+function CancellationConfirmModal({
+  job,
+  reason,
+  onChangeReason,
+  onConfirm,
+  onClose,
+}: {
+  job: Booking;
+  reason: string;
+  onChangeReason: (r: string) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const reasons = [
+    "Emergency",
+    "Schedule Conflict",
+    "Unable to Perform Service",
+    "Customer Request",
+    "Other",
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl flex flex-col gap-3.5 border border-[#E5E7EB]">
+        <div className="size-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-2xl mx-auto">
+          ⚠️
+        </div>
+
+        <div className="text-center flex flex-col gap-1">
+          <h3 className="text-base font-bold text-[#1F2937]">Cancel Booking?</h3>
+          <p className="text-xs text-[#DC2626] font-semibold bg-rose-50 p-2 rounded-xl border border-rose-200">
+            Cancelling confirmed bookings affects your provider completion rating and platform standing.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-1.5 text-xs">
+          <span className="font-bold text-[#1F2937]">Select Cancellation Reason:</span>
+          {reasons.map((r) => (
+            <label
+              key={r}
+              className={`flex items-center gap-2 p-2 rounded-xl border cursor-pointer transition-colors ${
+                reason === r ? "bg-teal-50 border-[#115E59] font-bold text-[#115E59]" : "border-[#E5E7EB] text-[#475569]"
+              }`}
+            >
+              <input
+                type="radio"
+                name="cancelReason"
+                checked={reason === r}
+                onChange={() => onChangeReason(r)}
+                className="accent-[#115E59]"
+              />
+              <span>{r}</span>
+            </label>
+          ))}
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-[#E5E7EB] text-[#6B7280] font-bold text-xs"
+          >
+            Keep Booking
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-2.5 rounded-xl bg-[#DC2626] text-white font-bold text-xs shadow-xs"
+          >
+            Confirm Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JOB COMPLETED CELEBRATION MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function JobCompletedCelebrationModal({
+  job,
+  onClose,
+  onToast,
+}: {
+  job: Booking;
+  onClose: () => void;
+  onToast: (m: string) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center gap-3 border border-[#E5E7EB]">
+        <div className="size-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl shadow-sm">
+          🎉
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold text-[#0F766E] uppercase tracking-wider">
+            Job Successfully Completed
+          </span>
+          <h3 className="text-lg font-black text-[#1F2937]">{job.serviceDetail}</h3>
+          <p className="text-xs text-[#6B7280]">Client: {job.clientName}</p>
+        </div>
+
+        <div className="bg-[#F0FDF4] border border-[#BBF7D0] p-4 rounded-2xl w-full flex flex-col gap-1">
+          <span className="text-[11px] text-emerald-800 font-semibold">Total Amount Collected (Cash):</span>
+          <span className="text-2xl font-black text-[#16A34A]">₱{job.estimatedCost}</span>
+          <span className="text-[10px] text-emerald-700">Payment received in full directly from client</span>
+        </div>
+
+        <button
+          onClick={() => {
+            onClose();
+            onToast("Payment recorded into your earnings ledger.");
+          }}
+          className="w-full py-3 bg-[#115E59] hover:bg-[#0F766E] text-white text-xs font-bold rounded-2xl shadow-xs transition-colors mt-2"
+        >
+          Done & Close Summary
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-VIEW: EARNINGS MODAL (KPIs, Bar Graph, Recent Transactions)
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderEarningsModal({
+  onClose,
+  completedJobs,
+  onToast,
+}: {
+  onClose: () => void;
+  completedJobs: Booking[];
+  onToast: (m: string) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm max-h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        <div className="bg-[#115E59] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#CCFBF1] uppercase font-bold tracking-wider">Revenue Ledger</span>
+            <h3 className="text-base font-bold text-white">My Earnings</h3>
+          </div>
+          <button onClick={onClose} className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold">
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4 text-xs">
+          {/* Main Balance Hero Card */}
+          <div className="bg-gradient-to-br from-[#115E59] to-[#0F766E] text-white p-5 rounded-2xl shadow-sm flex flex-col gap-2">
+            <span className="text-xs text-[#CCFBF1] font-semibold">Available Platform Balance</span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-3xl font-black tracking-tight">₱12,450</span>
+              <span className="text-xs bg-[#14B8A6]/30 px-2 py-0.5 rounded-full border border-teal-300/40 text-white font-bold">
+                ✓ Settled
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/15 text-center mt-1">
+              <div>
+                <span className="text-[9px] text-[#CCFBF1] block">This Week</span>
+                <span className="font-bold text-sm">₱6,200</span>
+              </div>
+              <div>
+                <span className="text-[9px] text-[#CCFBF1] block">This Month</span>
+                <span className="font-bold text-sm">₱21,800</span>
+              </div>
+              <div>
+                <span className="text-[9px] text-[#CCFBF1] block">Completed</span>
+                <span className="font-bold text-sm">28 jobs</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Clean Visual Bar Graph */}
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 flex flex-col gap-2 shadow-2xs">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-[#1F2937]">Weekly Earnings Trend</span>
+              <span className="text-[10px] text-[#0F766E] font-bold">Peak: Sat (₱2,800)</span>
+            </div>
+            <div className="flex items-end justify-between gap-2 h-28 pt-4 pb-1 px-1">
+              {[
+                { day: "M", val: 35, amt: "₱850" },
+                { day: "T", val: 55, amt: "₱1,200" },
+                { day: "W", val: 40, amt: "₱900" },
+                { day: "T", val: 65, amt: "₱1,450" },
+                { day: "F", val: 80, amt: "₱1,900" },
+                { day: "S", val: 100, amt: "₱2,800" },
+                { day: "S", val: 50, amt: "₱1,150" },
+              ].map((bar, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
+                  <div className="w-full bg-slate-100 rounded-lg h-20 flex items-end overflow-hidden">
+                    <div
+                      className="w-full bg-[#115E59] group-hover:bg-[#14B8A6] transition-all rounded-lg"
+                      style={{ height: `${bar.val}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-[#6B7280] font-semibold">{bar.day}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Earnings List */}
+          <div className="flex flex-col gap-2">
+            <span className="font-bold text-[#1F2937] text-xs uppercase tracking-wider">
+              Recent Transactions
+            </span>
+            {[
+              { service: "House Cleaning", client: "Juan Dela Cruz", date: "Sep 29", amount: "₱850" },
+              { service: "Electrical Repair", client: "Miguel Reyes", date: "Sep 28", amount: "₱1,200" },
+              { service: "AC Deep Cleaning", client: "Angela Cruz", date: "Sep 26", amount: "₱1,500" },
+              { service: "Plumbing Leak Fix", client: "Carlos Mendoza", date: "Sep 24", amount: "₱650" },
+            ].map((tx, idx) => (
+              <div
+                key={idx}
+                className="bg-white border border-[#E5E7EB] p-3 rounded-xl flex items-center justify-between shadow-2xs"
+              >
+                <div className="flex flex-col">
+                  <span className="font-bold text-[#1F2937]">{tx.service}</span>
+                  <span className="text-[10px] text-[#6B7280]">
+                    {tx.client} • {tx.date}
+                  </span>
+                </div>
+                <span className="text-xs font-black text-[#16A34A]">+{tx.amount}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-VIEW: MY SERVICES MANAGEMENT MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderServicesManagementModal({
+  services,
+  onClose,
+  onToggleStatus,
+  onEditService,
+  onOpenAdd,
+}: {
+  services: ProviderServiceItem[];
+  onClose: () => void;
+  onToggleStatus: (id: string) => void;
+  onEditService: (s: ProviderServiceItem) => void;
+  onOpenAdd: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm max-h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        <div className="bg-[#115E59] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#CCFBF1] uppercase font-bold tracking-wider">Service Catalog</span>
+            <h3 className="text-base font-bold text-white">My Services</h3>
+          </div>
+          <button onClick={onClose} className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold">
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-3 text-xs">
+          <button
+            onClick={onOpenAdd}
+            className="w-full py-2.5 rounded-xl bg-teal-50 border border-teal-200 text-[#0F766E] font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-teal-100 transition-colors"
+          >
+            <span>+</span> Add New Service Offering
+          </button>
+
+          {services.map((srv) => (
+            <div
+              key={srv.id}
+              className="bg-white border border-[#E5E7EB] rounded-2xl p-4 flex flex-col gap-2.5 shadow-xs"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex flex-col">
+                  <span className="font-bold text-sm text-[#1F2937]">{srv.name}</span>
+                  <span className="text-[10px] text-[#6B7280]">
+                    Category: {srv.category} • Est. {srv.duration}
+                  </span>
+                </div>
+                <button
+                  onClick={() => onToggleStatus(srv.id)}
+                  className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                    srv.status === "Active"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-slate-100 text-slate-500 border-slate-300"
+                  }`}
+                >
+                  {srv.status}
+                </button>
+              </div>
+
+              <p className="text-[#475569] text-xs leading-relaxed">{srv.description}</p>
+
+              <div className="flex items-center justify-between pt-2 border-t border-[#F3F4F6]">
+                <span className="text-xs font-bold text-[#115E59]">
+                  Starting: ₱{srv.startingPrice}
+                </span>
+                <button
+                  onClick={() => onEditService(srv)}
+                  className="text-xs font-bold text-[#0F766E] hover:underline"
+                >
+                  Edit Service ✏️
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-VIEW: AVAILABILITY & VACATION MODE MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderAvailabilityModal({
+  schedule,
+  onSaveSchedule,
+  vacationMode,
+  onToggleVacation,
+  onClose,
+}: {
+  schedule: {
+    days: Record<string, boolean>;
+    startTime: string;
+    endTime: string;
+  };
+  onSaveSchedule: (s: any) => void;
+  vacationMode: boolean;
+  onToggleVacation: (v: boolean) => void;
+  onClose: () => void;
+}) {
+  const [days, setDays] = useState(schedule.days);
+  const [startTime, setStartTime] = useState(schedule.startTime);
+  const [endTime, setEndTime] = useState(schedule.endTime);
+
+  const toggleDay = (d: string) => {
+    setDays((prev) => ({ ...prev, [d]: !prev[d] }));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm max-h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        <div className="bg-[#115E59] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#CCFBF1] uppercase font-bold tracking-wider">Working Hours</span>
+            <h3 className="text-base font-bold text-white">Availability Settings</h3>
+          </div>
+          <button onClick={onClose} className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold">
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4 text-xs">
+          {/* Vacation Mode Toggle */}
+          <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="font-bold text-amber-950 text-xs">🌴 Vacation Mode</span>
+              <span className="text-[10px] text-amber-800">Temporarily pause new customer booking requests</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={vacationMode}
+              onChange={(e) => onToggleVacation(e.target.checked)}
+              className="accent-amber-600 size-5 rounded"
+            />
+          </div>
+
+          {/* Weekly Days Toggle */}
+          <div className="flex flex-col gap-2">
+            <span className="font-bold text-[#1F2937] uppercase tracking-wider text-[11px]">
+              Weekly Working Days
+            </span>
+            <div className="flex flex-col gap-1.5">
+              {Object.entries(days).map(([day, enabled]) => (
+                <div
+                  key={day}
+                  onClick={() => toggleDay(day)}
+                  className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                    enabled ? "bg-teal-50/50 border-[#115E59]/30" : "bg-[#F8FAFA] border-[#E5E7EB]"
+                  }`}
+                >
+                  <span className={`font-semibold ${enabled ? "text-[#115E59]" : "text-[#6B7280]"}`}>{day}</span>
+                  <span
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                      enabled ? "bg-[#115E59] text-white" : "bg-slate-200 text-slate-500"
+                    }`}
+                  >
+                    {enabled ? "Available" : "Off"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Operating Hours */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1">
+              <span className="text-[#6B7280] font-semibold text-[10px]">Start Time</span>
+              <select
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="bg-[#F8FAFA] border border-[#E5E7EB] p-2 rounded-xl text-xs font-medium outline-none"
+              >
+                <option>7:00 AM</option>
+                <option>8:00 AM</option>
+                <option>9:00 AM</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[#6B7280] font-semibold text-[10px]">End Time</span>
+              <select
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="bg-[#F8FAFA] border border-[#E5E7EB] p-2 rounded-xl text-xs font-medium outline-none"
+              >
+                <option>4:00 PM</option>
+                <option>5:00 PM</option>
+                <option>6:00 PM</option>
+                <option>8:00 PM</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onSaveSchedule({ days, startTime, endTime })}
+            className="w-full py-2.5 rounded-xl bg-[#115E59] text-white font-bold text-xs shadow-xs mt-2"
+          >
+            Save Working Schedule
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-VIEW: SERVICE AREAS COVERAGE MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderServiceAreasModal({
+  areas,
+  newAreaInput,
+  onChangeInput,
+  onAddArea,
+  onRemoveArea,
+  onClose,
+}: {
+  areas: string[];
+  newAreaInput: string;
+  onChangeInput: (s: string) => void;
+  onAddArea: () => void;
+  onRemoveArea: (a: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm max-h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        <div className="bg-[#115E59] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#CCFBF1] uppercase font-bold tracking-wider">Territory</span>
+            <h3 className="text-base font-bold text-white">Service Area Coverage</h3>
+          </div>
+          <button onClick={onClose} className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold">
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4 text-xs">
+          <div className="bg-teal-50 border border-teal-200 p-3 rounded-2xl flex flex-col gap-1">
+            <span className="font-bold text-[#115E59]">📍 Coverage Radius</span>
+            <p className="text-[#0F766E] text-[11px] leading-relaxed">
+              Customers in these towns and barangays will see your profile in search results.
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newAreaInput}
+              onChange={(e) => onChangeInput(e.target.value)}
+              placeholder="e.g. Liliw, Laguna"
+              className="flex-1 bg-[#F8FAFA] border border-[#E5E7EB] px-3 py-2 rounded-xl text-xs outline-none focus:border-[#115E59]"
+            />
+            <button
+              onClick={onAddArea}
+              className="px-3 py-2 bg-[#115E59] text-white rounded-xl font-bold text-xs"
+            >
+              Add
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <span className="font-bold text-[#1F2937] uppercase tracking-wider text-[11px]">
+              Active Locations ({areas.length})
+            </span>
+            <div className="flex flex-col gap-1.5">
+              {areas.map((a) => (
+                <div
+                  key={a}
+                  className="bg-white border border-[#E5E7EB] p-2.5 rounded-xl flex items-center justify-between"
+                >
+                  <span className="font-semibold text-[#1F2937]">{a}</span>
+                  <button
+                    onClick={() => onRemoveArea(a)}
+                    className="text-rose-500 font-bold text-xs hover:bg-rose-50 px-2 py-0.5 rounded-lg"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-VIEW: RATINGS & REVIEWS BREAKDOWN MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderReviewsModal({
+  provider,
+  onClose,
+}: {
+  provider: Provider;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm max-h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        <div className="bg-[#115E59] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#CCFBF1] uppercase font-bold tracking-wider">Reputation</span>
+            <h3 className="text-base font-bold text-white">Ratings & Reviews</h3>
+          </div>
+          <button onClick={onClose} className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold">
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4 text-xs">
+          {/* Rating Breakdown Card */}
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 flex items-center gap-4 shadow-2xs">
+            <div className="flex flex-col items-center justify-center border-r border-[#E5E7EB] pr-4 shrink-0">
+              <span className="text-3xl font-black text-[#1F2937]">4.8</span>
+              <div className="flex text-amber-500 text-xs my-0.5">★★★★★</div>
+              <span className="text-[10px] text-[#6B7280]">120 reviews</span>
+            </div>
+
+            <div className="flex-1 flex flex-col gap-1 text-[10px]">
+              {[
+                { stars: "5★", count: 90, pct: "75%" },
+                { stars: "4★", count: 20, pct: "17%" },
+                { stars: "3★", count: 7, pct: "6%" },
+                { stars: "2★", count: 2, pct: "1.5%" },
+                { stars: "1★", count: 1, pct: "0.5%" },
+              ].map((r) => (
+                <div key={r.stars} className="flex items-center gap-2">
+                  <span className="w-5 text-[#6B7280] font-bold">{r.stars}</span>
+                  <div className="flex-1 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-[#115E59] h-full" style={{ width: r.pct }} />
+                  </div>
+                  <span className="w-6 text-right text-[#9CA3AF]">{r.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Customer Reviews List */}
+          <div className="flex flex-col gap-2">
+            <span className="font-bold text-[#1F2937] uppercase tracking-wider text-[11px]">
+              Recent Verified Client Feedback
+            </span>
+            {[
+              { name: "Juan Dela Cruz", rating: 5, date: "Sep 28, 2026", service: "House Cleaning", comment: "Very professional and arrived on time. Completed the deep scrub of the kitchen without any hassle." },
+              { name: "Angela Reyes", rating: 5, date: "Sep 22, 2026", service: "Deep Cleaning", comment: "Super bait and brought complete disinfection materials. Recommended to all in San Pablo!" },
+              { name: "Miguel Garcia", rating: 4, date: "Sep 15, 2026", service: "Appliance Cleaning", comment: "Good quality work. Arrived 10 minutes late due to traffic, but apologized and worked swiftly." },
+            ].map((rev, idx) => (
+              <div key={idx} className="bg-white border border-[#E5E7EB] p-3 rounded-2xl flex flex-col gap-1 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#1F2937]">{rev.name}</span>
+                  <span className="text-[10px] text-[#9CA3AF]">{rev.date}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex text-amber-500 text-xs">★★★★★</div>
+                  <span className="text-[10px] text-[#0F766E] font-semibold">• {rev.service}</span>
+                </div>
+                <p className="text-[#475569] text-xs leading-relaxed mt-0.5">{rev.comment}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-VIEW: PERFORMANCE METRICS MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderPerformanceModal({
+  provider,
+  onClose,
+}: {
+  provider: Provider;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm max-h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        <div className="bg-[#115E59] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#CCFBF1] uppercase font-bold tracking-wider">Quality Score</span>
+            <h3 className="text-base font-bold text-white">Performance Metrics</h3>
+          </div>
+          <button onClick={onClose} className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold">
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4 text-xs">
+          {/* Standing Badge */}
+          <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl flex items-center gap-3">
+            <div className="size-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-lg">
+              ✓
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-emerald-900 text-sm">Excellent Standing</span>
+              <span className="text-emerald-700 text-[11px]">Eligible for top-tier marketplace priority matching</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            {[
+              { label: "Community Rating", val: "4.8 / 5.0", target: "Target: >4.5 ★", ok: true },
+              { label: "Completed Bookings", val: "120 jobs", target: "Top 5% in San Pablo", ok: true },
+              { label: "Completion Rate", val: "96%", target: "Target: >90%", ok: true },
+              { label: "Cancellation Rate", val: "2%", target: "Target: <5%", ok: true },
+              { label: "Response Rate", val: "98%", target: "Target: >95%", ok: true },
+              { label: "Avg Response Time", val: "~5 min", target: "Fast Responder", ok: true },
+            ].map((m, idx) => (
+              <div key={idx} className="bg-white border border-[#E5E7EB] p-3 rounded-xl flex flex-col gap-1 shadow-2xs">
+                <span className="text-[#6B7280] text-[10px] font-medium">{m.label}</span>
+                <span className="text-base font-black text-[#1F2937]">{m.val}</span>
+                <span className="text-[9px] font-bold text-[#16A34A]">{m.target}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-VIEW: PROVIDER VERIFICATION CHECKLIST MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderVerificationModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm max-h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        <div className="bg-[#115E59] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#CCFBF1] uppercase font-bold tracking-wider">Compliance</span>
+            <h3 className="text-base font-bold text-white">Provider Verification</h3>
+          </div>
+          <button onClick={onClose} className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold">
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4 text-xs">
+          <div className="bg-teal-50 border border-teal-200 p-3.5 rounded-2xl flex flex-col gap-1">
+            <span className="font-bold text-[#115E59]">Badge Status: Fully Verified Provider</span>
+            <p className="text-[#0F766E] text-[11px] leading-relaxed">
+              Completing your verification improves customer trust and visibility in search results.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {[
+              { title: "Identity Verification", status: "Verified", date: "Jan 2026", icon: "🪪" },
+              { title: "Government ID (PhilSys/UMID)", status: "Verified", date: "Jan 2026", icon: "✓" },
+              { title: "Service Credentials (TESDA NC II)", status: "Verified", date: "Feb 2026", icon: "🎖️" },
+              { title: "Profile & Background Review", status: "Approved", date: "Feb 2026", icon: "📜" },
+            ].map((v, i) => (
+              <div key={i} className="bg-white border border-[#E5E7EB] p-3 rounded-xl flex items-center justify-between shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">{v.icon}</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-[#1F2937]">{v.title}</span>
+                    <span className="text-[10px] text-[#6B7280]">Validated: {v.date}</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                  ✓ {v.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-VIEW: ACCOUNT STANDING MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderAccountStandingModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm max-h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        <div className="bg-[#115E59] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#CCFBF1] uppercase font-bold tracking-wider">Moderation</span>
+            <h3 className="text-base font-bold text-white">Account Standing</h3>
+          </div>
+          <button onClick={onClose} className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold">
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4 text-xs">
+          <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex flex-col gap-1 text-center">
+            <span className="text-2xl">🛡️</span>
+            <span className="text-sm font-bold text-emerald-950">Good Standing</span>
+            <p className="text-[11px] text-emerald-800 leading-relaxed mt-1">
+              Your provider account is in good standing with 0 active penalty points and no unresolved disputes.
+            </p>
+          </div>
+
+          <div className="bg-[#F8FAFA] p-3 rounded-xl border border-[#E5E7EB] flex flex-col gap-2">
+            <span className="font-bold text-[#1F2937]">Standing Policy Highlights</span>
+            <p className="text-[#6B7280] leading-relaxed">
+              • Maintain cancellation rate below 5% to avoid booking restrictions.
+            </p>
+            <p className="text-[#6B7280] leading-relaxed">
+              • Ensure punctual arrival and polite client interaction for every service.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-VIEW: HELP & SUPPORT MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderHelpSupportModal({
+  onClose,
+  onOpenAI,
+  onToast,
+}: {
+  onClose: () => void;
+  onOpenAI?: () => void;
+  onToast: (m: string) => void;
+}) {
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const faqs = [
+    { q: "How do I receive payments?", a: "Clients pay you in cash directly upon job completion. TapServe does not withhold your earnings." },
+    { q: "What if a customer cancels?", a: "Cancellations made within 2 hours of schedule are recorded and do not affect your rating." },
+    { q: "How do I change my service rates?", a: "Go to Profile > My Services & Pricing to update your hourly rate and duration anytime." },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm max-h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        <div className="bg-[#115E59] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#CCFBF1] uppercase font-bold tracking-wider">Assistance</span>
+            <h3 className="text-base font-bold text-white">Help & Support</h3>
+          </div>
+          <button onClick={onClose} className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold">
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4 text-xs">
+          {/* Tappy AI Copilot Prominent Banner */}
+          {onOpenAI && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenAI();
+              }}
+              className="bg-gradient-to-r from-[#0F766E] to-[#115E59] text-white p-3.5 rounded-2xl flex items-center justify-between shadow-xs cursor-pointer active:scale-98 transition-all hover:brightness-105"
+            >
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full bg-white/20 p-1 flex items-center justify-center shrink-0 border border-white/40">
+                  <TappyAvatar size={34} />
+                </div>
+                <div className="flex flex-col text-left">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-white">Tappy AI Provider Copilot</span>
+                    <span className="bg-[#14B8A6] text-[#042F2E] text-[8px] font-black px-1.5 py-0.2 rounded-md uppercase">PRO AI</span>
+                  </div>
+                  <span className="text-[10px] text-[#CCFBF1]">Get 24/7 instant guidance for your business</span>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold bg-white/15 px-2.5 py-1 rounded-xl">Ask AI →</span>
+            </button>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => onToast("Hotline dialer opened: +63 (049) 562-1100")}
+              className="bg-white border border-[#E5E7EB] p-3 rounded-xl flex flex-col items-center gap-1 text-center shadow-2xs hover:bg-slate-50"
+            >
+              <span className="text-lg">📞</span>
+              <span className="font-bold text-[#1F2937]">Hotline</span>
+              <span className="text-[9px] text-[#6B7280]">San Pablo Help Desk</span>
+            </button>
+            <button
+              onClick={() => onToast("Support ticket draft created.")}
+              className="bg-white border border-[#E5E7EB] p-3 rounded-xl flex flex-col items-center gap-1 text-center shadow-2xs hover:bg-slate-50"
+            >
+              <span className="text-lg">📩</span>
+              <span className="font-bold text-[#1F2937]">Report Issue</span>
+              <span className="text-[9px] text-[#6B7280]">Direct Admin Ticket</span>
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <span className="font-bold text-[#1F2937] uppercase tracking-wider text-[11px]">
+              Frequently Asked Questions
+            </span>
+            <div className="flex flex-col gap-1.5">
+              {faqs.map((f, i) => (
+                <div key={i} className="border border-[#E5E7EB] rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="w-full p-3 text-left font-bold text-[#1F2937] flex justify-between items-center bg-white hover:bg-slate-50"
+                  >
+                    <span>{f.q}</span>
+                    <span className="text-slate-400 font-bold">{openFaq === i ? "▲" : "▼"}</span>
+                  </button>
+                  {openFaq === i && (
+                    <div className="p-3 bg-[#F8FAFA] border-t border-[#E5E7EB] text-[#475569] leading-relaxed">
+                      {f.a}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-VIEW: NOTIFICATIONS DRAWER MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderNotificationsModal({
+  notifications,
+  category,
+  onSelectCategory,
+  onMarkRead,
+  onMarkAllRead,
+  onClose,
+}: {
+  notifications: NotificationItem[];
+  category: "All" | "Bookings" | "Messages" | "System";
+  onSelectCategory: (c: any) => void;
+  onMarkRead: (id: string) => void;
+  onMarkAllRead: () => void;
+  onClose: () => void;
+}) {
+  const filtered = notifications.filter(
+    (n) => category === "All" || n.category === category
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm max-h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        <div className="bg-[#115E59] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#CCFBF1] uppercase font-bold tracking-wider">Alerts</span>
+            <h3 className="text-base font-bold text-white">Provider Notifications</h3>
+          </div>
+          <button onClick={onClose} className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold">
+            ✕
+          </button>
+        </div>
+
+        {/* Filter categories & Mark all read */}
+        <div className="p-3 bg-[#F8FAFA] border-b border-[#E5E7EB] flex items-center justify-between gap-1 text-xs">
+          <div className="flex gap-1 overflow-x-auto no-scrollbar">
+            {(["All", "Bookings", "Messages", "System"] as const).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => onSelectCategory(cat)}
+                className={`px-2.5 py-1 rounded-xl font-bold text-[10px] transition-colors ${
+                  category === cat ? "bg-[#115E59] text-white" : "bg-white text-[#6B7280] border border-[#E5E7EB]"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <button onClick={onMarkAllRead} className="text-[10px] font-bold text-[#0F766E] hover:underline whitespace-nowrap">
+            Mark all read
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-4 flex flex-col gap-2 text-xs">
+          {filtered.map((n) => (
+            <div
+              key={n.id}
+              onClick={() => onMarkRead(n.id)}
+              className={`p-3 rounded-2xl border transition-all cursor-pointer flex gap-3 items-start ${
+                n.read ? "bg-white border-[#E5E7EB]" : "bg-teal-50/50 border-[#115E59]/40 shadow-2xs"
+              }`}
+            >
+              <div className="size-8 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-center text-base shrink-0 shadow-2xs">
+                {n.icon}
+              </div>
+              <div className="flex flex-col flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#1F2937] truncate">{n.title}</span>
+                  <span className="text-[9px] text-[#9CA3AF] shrink-0">{n.time}</span>
+                </div>
+                <p className="text-[#475569] text-[11px] leading-relaxed mt-0.5">{n.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADD OR EDIT SERVICE MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function AddEditServiceModal({
+  initial,
+  onSave,
+  onClose,
+}: {
+  initial: ProviderServiceItem | null;
+  onSave: (s: ProviderServiceItem) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(initial?.name || "");
+  const [category, setCategory] = useState(initial?.category || "Cleaning");
+  const [startingPrice, setStartingPrice] = useState(initial?.startingPrice?.toString() || "600");
+  const [duration, setDuration] = useState(initial?.duration || "2 hours");
+  const [desc, setDesc] = useState(initial?.description || "");
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    onSave({
+      id: initial?.id || `srv-${Date.now()}`,
+      name: name.trim(),
+      category,
+      startingPrice: parseInt(startingPrice) || 500,
+      duration,
+      status: initial?.status || "Active",
+      description: desc.trim() || "Professional service performed to highest TapServe standards.",
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl flex flex-col gap-3.5 border border-[#E5E7EB]">
+        <div className="flex items-center justify-between border-b border-[#F3F4F6] pb-2">
+          <h3 className="font-bold text-sm text-[#1F2937]">
+            {initial ? "Edit Service Offering" : "Add New Service Offering"}
+          </h3>
+          <button onClick={onClose} className="text-slate-400 font-bold text-sm">✕</button>
+        </div>
+
+        <div className="flex flex-col gap-2.5 text-xs">
+          <div className="flex flex-col gap-1">
+            <span className="font-bold text-[#1F2937]">Service Name</span>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Deep Sofa Cleaning"
+              className="bg-[#F8FAFA] border border-[#E5E7EB] p-2.5 rounded-xl outline-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1">
+              <span className="font-bold text-[#1F2937]">Starting Price (₱)</span>
+              <input
+                type="number"
+                value={startingPrice}
+                onChange={(e) => setStartingPrice(e.target.value)}
+                className="bg-[#F8FAFA] border border-[#E5E7EB] p-2.5 rounded-xl outline-none"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="font-bold text-[#1F2937]">Est. Duration</span>
+              <input
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                placeholder="e.g. 2.5 hours"
+                className="bg-[#F8FAFA] border border-[#E5E7EB] p-2.5 rounded-xl outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="font-bold text-[#1F2937]">Description</span>
+            <textarea
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              placeholder="Explain scope of work included in this rate..."
+              rows={3}
+              className="bg-[#F8FAFA] border border-[#E5E7EB] p-2.5 rounded-xl outline-none resize-none leading-relaxed"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[#E5E7EB] text-[#6B7280] font-bold text-xs">
+            Cancel
+          </button>
+          <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-[#115E59] text-white font-bold text-xs shadow-xs">
+            Save Service
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 16. PROVIDER AI ASSISTANT MODAL (Tappy — Provider Business Copilot)
+// ─────────────────────────────────────────────────────────────────────────────
+interface ProviderAIMessage {
+  id: string;
+  sender: "bot" | "user";
+  text: string;
+  time: string;
+  actionButtons?: { label: string; action: () => void }[];
+}
+
+function ProviderAIAssistantModal({
+  provider,
+  onClose,
+  onOpenSubView,
+  onToast,
+}: {
+  provider: Provider;
+  onClose: () => void;
+  onOpenSubView: (view: any) => void;
+  onToast: (msg: string) => void;
+}) {
+  const firstName = provider.name.split(" ")[0] || "Specialist";
+  const [input, setInput] = useState("");
+  const endRef = useRef<HTMLDivElement>(null);
+
+  const [messages, setMessages] = useState<ProviderAIMessage[]>([
+    {
+      id: "msg-1",
+      sender: "bot",
+      text: `Kumusta, ${firstName}! 👋 I'm Tappy, your TapServe AI Business Assistant. How can I help you optimize your bookings, schedule, rates, or earnings today in San Pablo City?`,
+      time: "Just now",
+      actionButtons: [
+        { label: "💰 View Earnings", action: () => { onClose(); onOpenSubView("earnings"); } },
+        { label: "📅 Set Availability", action: () => { onClose(); onOpenSubView("availability"); } },
+        { label: "🛠️ Manage Services", action: () => { onClose(); onOpenSubView("services"); } },
+      ],
+    },
+  ]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const quickQuestions = [
+    "How do I maximize my earnings?",
+    "How to set schedule & vacation mode?",
+    "How to add or update services?",
+    "How does Account Standing work?",
+    "What documents do I need to get verified?",
+    "How to get more 5-star reviews?",
+  ];
+
+  const handleAskQuestion = (question: string) => {
+    const userMsg: ProviderAIMessage = {
+      id: `usr-${Date.now()}`,
+      sender: "user",
+      text: question,
+      time: "Just now",
+    };
+    setMessages((prev) => [...prev, userMsg]);
+
+    setTimeout(() => {
+      let botReply = "";
+      let buttons: { label: string; action: () => void }[] | undefined = undefined;
+
+      switch (question) {
+        case "How do I maximize my earnings?":
+          botReply =
+            "To maximize earnings in San Pablo City: (1) Keep your availability active during weekend peak hours (8 AM - 4 PM), (2) Accept booking requests within 5 minutes, (3) Maintain a 4.8+ rating to get prioritized matching, and (4) Offer specialized add-ons like deep disinfection or premium materials!";
+          buttons = [
+            { label: "Open Earnings Ledger →", action: () => { onClose(); onOpenSubView("earnings"); } },
+            { label: "View Performance Stats →", action: () => { onClose(); onOpenSubView("performance"); } },
+          ];
+          break;
+
+        case "How to set schedule & vacation mode?":
+          botReply =
+            "You can enable or disable working days (Mon-Sat) and set custom daily shift hours under 'Availability'. If you are resting or away, toggle 'Vacation Mode' on so clients won't be able to book you while you take time off!";
+          buttons = [
+            { label: "Configure Availability →", action: () => { onClose(); onOpenSubView("availability"); } },
+          ];
+          break;
+
+        case "How to add or update services?":
+          botReply =
+            "Head to 'My Services' to add new trade packages, set starting prices in ₱ Philippine Peso, provide expected job durations, and describe what's included in each service package.";
+          buttons = [
+            { label: "Manage Services & Rates →", action: () => { onClose(); onOpenSubView("services"); } },
+          ];
+          break;
+
+        case "How does Account Standing work?":
+          botReply =
+            "TapServe evaluates provider quality based on: (1) Completion Rate (>90%), (2) Low Cancellations (<5%), and (3) Punctuality. Accounts in 'Good Standing' with 0 violation points enjoy maximum client exposure and instant job notifications!";
+          buttons = [
+            { label: "View Account Standing →", action: () => { onClose(); onOpenSubView("standing"); } },
+            { label: "Review Rating & Feedback →", action: () => { onClose(); onOpenSubView("reviews"); } },
+          ];
+          break;
+
+        case "What documents do I need to get verified?":
+          botReply =
+            "TapServe verification requires: (1) Valid Government ID (PhilSys National ID, Driver's License, or Voter's Certificate), (2) TESDA NC II Trade Certificate or PRC License, and (3) Barangay Clearance in San Pablo City.";
+          buttons = [
+            { label: "Check Verification Status →", action: () => { onClose(); onOpenSubView("verification"); } },
+          ];
+          break;
+
+        case "How to get more 5-star reviews?":
+          botReply =
+            "Clients love: (1) Arriving 5-10 minutes early, (2) Sending quick message updates ('On the way', 'I have arrived'), (3) Cleaning up tools after work, and (4) Polite, professional communication throughout the service.";
+          buttons = [
+            { label: "View Client Reviews →", action: () => { onClose(); onOpenSubView("reviews"); } },
+          ];
+          break;
+
+        default:
+          botReply = "I am here to support your service business on TapServe! Feel free to ask about jobs, schedule, rates, or customer tips.";
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `bot-${Date.now()}`,
+          sender: "bot",
+          text: botReply,
+          time: "Just now",
+          actionButtons: buttons,
+        },
+      ]);
+    }, 550);
+  };
+
+  const handleSend = () => {
+    const text = input.trim();
+    if (!text) return;
+
+    const userMsg: ProviderAIMessage = {
+      id: `usr-${Date.now()}`,
+      sender: "user",
+      text,
+      time: "Just now",
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+
+    setTimeout(() => {
+      const lower = text.toLowerCase();
+      let botReply = "";
+      let buttons: { label: string; action: () => void }[] | undefined = undefined;
+
+      if (lower.includes("earning") || lower.includes("pera") || lower.includes("kita") || lower.includes("rate") || lower.includes("presyo") || lower.includes("payout")) {
+        botReply =
+          "Cash payments are settled directly with the client right after you mark the job completed. You can inspect your weekly and monthly earnings breakdown in your Earnings dashboard!";
+        buttons = [{ label: "Open Earnings →", action: () => { onClose(); onOpenSubView("earnings"); } }];
+      } else if (lower.includes("sched") || lower.includes("oras") || lower.includes("time") || lower.includes("vacation") || lower.includes("day") || lower.includes("off")) {
+        botReply =
+          "You have complete control over your calendar! Set your daily hours or toggle Vacation Mode so you never receive surprise bookings when you're busy.";
+        buttons = [{ label: "Set Availability →", action: () => { onClose(); onOpenSubView("availability"); } }];
+      } else if (lower.includes("service") || lower.includes("linis") || lower.includes("repair") || lower.includes("gawa") || lower.includes("rate")) {
+        botReply =
+          "You can configure your service packages, prices, and job descriptions under 'My Services'. Clear descriptions lead to higher customer bookings!";
+        buttons = [{ label: "My Services →", action: () => { onClose(); onOpenSubView("services"); } }];
+      } else if (lower.includes("cancel") || lower.includes("tanggihan") || lower.includes("decline")) {
+        botReply =
+          "Frequent cancellations after accepting can affect your completion rating and standing. If you have an emergency, please notify the customer via chat first before cancelling.";
+        buttons = [{ label: "Check Standing →", action: () => { onClose(); onOpenSubView("standing"); } }];
+      } else if (lower.includes("verify") || lower.includes("clearance") || lower.includes("tesda") || lower.includes("id")) {
+        botReply =
+          "Verified providers carry the green Verified Pro Badge and appear first in customer search results across San Pablo City.";
+        buttons = [{ label: "View Credentials →", action: () => { onClose(); onOpenSubView("verification"); } }];
+      } else {
+        botReply =
+          `I got that! As your TapServe Copilot, I can help optimize your bookings, schedule, and client ratings in San Pablo City. What would you like to check?`;
+        buttons = [
+          { label: "💰 Earnings", action: () => { onClose(); onOpenSubView("earnings"); } },
+          { label: "📅 Schedule", action: () => { onClose(); onOpenSubView("availability"); } },
+          { label: "🛠️ Services", action: () => { onClose(); onOpenSubView("services"); } },
+        ];
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `bot-${Date.now()}`,
+          sender: "bot",
+          text: botReply,
+          time: "Just now",
+          actionButtons: buttons,
+        },
+      ]);
+    }, 600);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        {/* Header */}
+        <div className="bg-[#115E59] text-white px-4 py-3 flex items-center justify-between shrink-0 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <button onClick={onClose} className="text-white text-base font-bold pr-1 hover:opacity-80 cursor-pointer">
+              ←
+            </button>
+            <div className="size-9 rounded-full bg-white/20 p-1 flex items-center justify-center shrink-0 border border-white/40 shadow-xs">
+              <TappyAvatar size={32} />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-white tracking-tight">Tappy — Provider Copilot</span>
+                <span className="bg-[#14B8A6] text-[#042F2E] text-[8px] font-black uppercase px-1 py-0.2 rounded-md">
+                  AI PRO
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="size-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                <span className="text-[10px] text-[#CCFBF1]">Online · Business Assistant</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="size-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Messages Body */}
+        <div className="flex-1 overflow-y-auto no-scrollbar p-4 flex flex-col gap-3 bg-[#F8FAFA]">
+          <div className="text-center my-0.5">
+            <span className="text-[10px] text-[#0F766E] bg-teal-50 px-3 py-1 rounded-full border border-teal-200 font-semibold">
+              ✨ TapServe AI Specialist Copilot · San Pablo City
+            </span>
+          </div>
+
+          {messages.map((m) => {
+            const isMe = m.sender === "user";
+            return (
+              <div
+                key={m.id}
+                className={`flex flex-col gap-1.5 max-w-[85%] ${isMe ? "ml-auto items-end" : "mr-auto items-start"}`}
+              >
+                <div className="flex items-end gap-1.5">
+                  {!isMe && (
+                    <div className="size-6 rounded-full bg-teal-100 p-0.5 shrink-0 mb-1 border border-teal-200">
+                      <TappyAvatar size={20} />
+                    </div>
+                  )}
+                  <div
+                    className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                      isMe
+                        ? "bg-[#115E59] text-white rounded-br-xs shadow-2xs"
+                        : "bg-white text-[#1F2937] rounded-bl-xs border border-[#E5E7EB] shadow-xs"
+                    }`}
+                  >
+                    {m.text}
+                  </div>
+                </div>
+
+                {/* Optional Action Deep-Link Buttons from AI */}
+                {m.actionButtons && m.actionButtons.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pl-7 mt-0.5">
+                    {m.actionButtons.map((btn, bIdx) => (
+                      <button
+                        key={bIdx}
+                        onClick={btn.action}
+                        className="bg-white border border-[#115E59] text-[#115E59] hover:bg-teal-50 px-2.5 py-1 rounded-xl text-[10px] font-bold shadow-2xs active:scale-95 transition-all cursor-pointer"
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <span className="text-[9px] text-[#9CA3AF] px-1">{m.time}</span>
+              </div>
+            );
+          })}
+          <div ref={endRef} />
+        </div>
+
+        {/* Quick Suggestion Chips */}
+        <div className="bg-white border-t border-[#E5E7EB] px-3 pt-2 pb-1.5 shrink-0 flex flex-col gap-1.5">
+          <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+            Suggested Provider Inquiries
+          </span>
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            {quickQuestions.map((q, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleAskQuestion(q)}
+                className="bg-[#F8FAFA] hover:bg-teal-50 border border-[#E5E7EB] hover:border-[#115E59]/40 text-[#1F2937] hover:text-[#115E59] text-[10px] font-semibold px-2.5 py-1 rounded-xl whitespace-nowrap shrink-0 transition-colors cursor-pointer"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Input Bar */}
+        <div className="p-3 bg-white border-t border-[#E5E7EB] flex items-center gap-2 shrink-0">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            placeholder="Ask Tappy anything about your provider business..."
+            className="flex-1 bg-[#F8FAFA] border border-[#E5E7EB] focus:border-[#115E59] px-3 py-2 rounded-xl text-xs text-[#1F2937] outline-none transition-colors"
+          />
+          <button
+            onClick={handleSend}
+            disabled={!input.trim()}
+            className="size-8 rounded-full bg-[#115E59] hover:bg-[#0F766E] disabled:opacity-40 text-white flex items-center justify-center font-bold text-xs shadow-xs cursor-pointer"
+            aria-label="Send message to Tappy"
+          >
+            ➤
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPATIBILITY EXPORTS FOR EXISTING ROUTES
+// ─────────────────────────────────────────────────────────────────────────────
+export function ProviderBookingRequestScreen(props: any) {
+  return <ProviderDashboardScreen {...props} />;
+}
+
+export function ProviderAvailabilityScreen(props: any) {
+  return <ProviderDashboardScreen {...props} />;
+}
+
+export function ProviderReviewsScreen(props: any) {
+  return <ProviderDashboardScreen {...props} />;
+}
+
+export function ProviderServicesScreen(props: any) {
+  return <ProviderDashboardScreen {...props} />;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROVIDER APPLICATION WIZARD (Modernized for registration flow)
+// ─────────────────────────────────────────────────────────────────────────────
 export function ProviderApplyScreen({
   nav,
   goBack,
@@ -24,26 +3666,22 @@ export function ProviderApplyScreen({
   onSubmitApplication: (appData: ProviderApplicationData) => void;
   onToast: (msg: string) => void;
 }) {
-  const [step, setStep] = useState(0); // 0 = Intro, 1 = Personal, 2 = Service, 3 = Docs, 4 = Terms, 5 = Review, 6 = Status
+  const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
-  // Step 1: Personal
-  const [fullName, setFullName] = useState(currentUser.name || "Juan Dela Cruz");
+  // Form Fields
+  const [fullName, setFullName] = useState(currentUser.name || "Maria Santos");
   const [dob, setDob] = useState("1988-06-15");
   const [age, setAge] = useState("38");
   const [address, setAddress] = useState("Brgy. San Roque, San Pablo City, Laguna");
   const [contactNumber, setContactNumber] = useState("+63 917 555 1234");
   const [email, setEmail] = useState(currentUser.email || "specialist@tapserve.demo");
   const [photoName, setPhotoName] = useState<string | null>("profile_photo.jpg");
-
-  // Step 2: Service
-  const [category, setCategory] = useState("Plumbing");
-  const [specialization, setSpecialization] = useState("Master Plumber & Pipe Specialist");
-  const [yearsExp, setYearsExp] = useState("10");
-  const [description, setDescription] = useState(
-    "Experienced residential and commercial plumbing specialist handling pipe leak diagnostics, water pump installation, and drain unclogging."
-  );
-  const [serviceArea, setServiceArea] = useState("San Pablo City and surrounding Laguna areas");
+  const [category, setCategory] = useState("Cleaning");
+  const [specialization, setSpecialization] = useState("Deep House Cleaning & Disinfection");
+  const [yearsExp, setYearsExp] = useState(7);
+  const [description, setDesc] = useState("Professional specialist accredited in San Pablo City.");
+  const [serviceArea, setServiceArea] = useState("San Pablo City, Laguna");
   const [workingDays, setWorkingDays] = useState<string[]>([
     "Monday",
     "Tuesday",
@@ -53,55 +3691,12 @@ export function ProviderApplyScreen({
     "Saturday",
   ]);
   const [workingHours, setWorkingHours] = useState("8:00 AM – 5:00 PM");
-
-  // Step 3: Documents
-  const [docs, setDocs] = useState<{ [key: string]: string }>({
-    govId: "philippine_passport_front.jpg",
-    proofAddress: "utility_bill_meralco.pdf",
-    barangayClearance: "brgy_clearance_san_roque.pdf",
-    nbiClearance: "nbi_clearance_verified.pdf",
+  const [docs, setDocs] = useState<Record<string, string>>({
+    govId: "PhilSys_National_ID.pdf",
+    clearance: "Barangay_San_Roque_Clearance.pdf",
+    tradeCert: "TESDA_NC2_Certificate.pdf",
   });
-
-  // Step 4: Terms
-  const [termsAgreed, setTermsAgreed] = useState(false);
-
-  // Categories list
-  const categoryOptions = [
-    "Cleaning",
-    "Plumbing",
-    "Electrical",
-    "Gardening",
-    "Appliance Repair",
-    "Carpentry",
-    "Home Maintenance",
-    "Aircon Cleaning",
-    "Painting",
-    "Pest Control",
-    "Moving Assistance",
-    "Other Services",
-  ];
-
-  const daysList = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-  const toggleDay = (d: string) => {
-    setWorkingDays((prev) =>
-      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
-    );
-  };
-
-  const handleDocUpload = (key: string, name: string) => {
-    setDocs((prev) => ({ ...prev, [key]: name }));
-    onToast(`Uploaded ${name}`);
-  };
-
-  const handleRemoveDoc = (key: string) => {
-    setDocs((prev) => {
-      const copy = { ...prev };
-      delete copy[key];
-      return copy;
-    });
-    onToast("Document removed.");
-  };
+  const [termsAgreed, setTermsAgreed] = useState(true);
 
   const handleSubmitFinal = () => {
     setSubmitting(true);
@@ -125,67 +3720,60 @@ export function ProviderApplyScreen({
         documents: docs,
         termsAgreed,
         status: "Submitted",
-        submittedAt: new Date().toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }),
+        submittedAt: "Oct 12, 2026",
       };
       onSubmitApplication(appData);
-      setStep(6); // Go to Status screen
+      setStep(6);
       onToast("Application submitted successfully!");
-    }, 1000);
+    }, 800);
   };
 
-  // ─── STEP 0: Intro Screen ───
   if (step === 0) {
     return (
-      <div className="bg-[#f8fafc] flex flex-col size-full">
-        <div className="bg-[#115e59] flex items-center gap-3 px-5 pt-12 pb-5 shrink-0">
+      <div className="bg-[#F8FAFA] flex flex-col size-full font-sans select-none">
+        <div className="bg-[#115E59] flex items-center gap-3 px-5 pt-12 pb-5 shrink-0 text-white shadow-xs">
           <button
             onClick={goBack}
-            className="bg-white/15 flex items-center justify-center rounded-xl size-9 active:bg-white/25 touch-manipulation text-white"
+            className="bg-white/15 flex items-center justify-center rounded-xl size-9 active:bg-white/25 text-white"
           >
-            <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
+            ←
           </button>
-          <h1 className="text-white text-lg font-bold flex-1" style={{ fontFamily: "Lexend Deca, sans-serif" }}>
+          <h1 className="text-white text-base font-bold flex-1">
             Service Provider Application
           </h1>
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar p-6 flex flex-col items-center text-center gap-4">
-          <div className="size-20 rounded-full bg-[#f0fdfa] border-2 border-[#ccfbf1] flex items-center justify-center text-3xl shadow-sm mt-2">
-            💼
+          <div className="size-20 rounded-3xl bg-white border-2 border-teal-200 flex items-center justify-center p-2 shadow-xs mt-2">
+            <TapServeLogo size={68} />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <h2 className="text-[#0f172a] text-xl font-bold tracking-tight" style={{ fontFamily: "Lexend Deca, sans-serif" }}>
-              Join TapServe as a Certified Specialist
+          <div className="flex flex-col gap-1">
+            <h2 className="text-[#1F2937] text-xl font-bold tracking-tight">
+              Join TapServe as a Certified Pro
             </h2>
-            <p className="text-[#64748b] text-xs leading-relaxed max-w-[280px]">
-              Connect directly with households in San Pablo City, Laguna looking for reliable home services.
+            <p className="text-[#6B7280] text-xs leading-relaxed max-w-[280px]">
+              Connect directly with households in San Pablo City looking for reliable home repairs and services.
             </p>
           </div>
 
-          <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col gap-3 text-left w-full shadow-xs">
-            <span className="text-[#0f172a] text-xs font-bold uppercase tracking-wider">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 flex flex-col gap-3 text-left w-full shadow-xs">
+            <span className="text-[#1F2937] text-xs font-bold uppercase tracking-wider">
               Application Steps
             </span>
             {[
               { num: "1", title: "Personal Details", desc: "Basic contact and identity information" },
-              { num: "2", title: "Service & Experience", desc: "Select category, rates, and working days" },
-              { num: "3", title: "Documents & Clearances", desc: "Upload ID, NBI or Barangay clearance" },
-              { num: "4", title: "Terms Agreement", desc: "Review specialist code of conduct" },
+              { num: "2", title: "Service & Rates", desc: "Trade category and working days" },
+              { num: "3", title: "Documents & Clearances", desc: "Government ID & TESDA clearance" },
+              { num: "4", title: "Terms Agreement", desc: "Specialist code of conduct" },
             ].map((st) => (
               <div key={st.num} className="flex gap-3 items-center">
-                <span className="size-6 rounded-full bg-[#0d9488] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                <span className="size-6 rounded-full bg-[#115E59] text-white flex items-center justify-center text-xs font-bold shrink-0">
                   {st.num}
                 </span>
                 <div className="flex flex-col">
-                  <span className="text-[#0f172a] text-xs font-bold">{st.title}</span>
-                  <span className="text-[#64748b] text-[10px]">{st.desc}</span>
+                  <span className="text-[#1F2937] text-xs font-bold">{st.title}</span>
+                  <span className="text-[#6B7280] text-[10px]">{st.desc}</span>
                 </div>
               </div>
             ))}
@@ -193,95 +3781,58 @@ export function ProviderApplyScreen({
 
           <button
             onClick={() => setStep(1)}
-            className="bg-[#0d9488] text-white text-sm font-bold py-3.5 rounded-xl w-full active:brightness-90 touch-manipulation shadow-md mt-auto"
+            className="bg-[#115E59] hover:bg-[#0F766E] text-white text-xs font-bold py-3.5 rounded-2xl w-full active:brightness-90 touch-manipulation shadow-md mt-auto cursor-pointer"
           >
-            Start Application
+            Start Application →
           </button>
         </div>
       </div>
     );
   }
 
-  // ─── STEP 6: Application Status Screen ───
   if (step === 6) {
     const isApproved = currentUser.providerApplicationStatus === "Approved" || currentUser.isProvider;
 
     return (
-      <div className="bg-[#f8fafc] flex flex-col size-full">
-        <div className="bg-[#115e59] flex items-center justify-between px-5 pt-12 pb-5 shrink-0">
-          <h1 className="text-white text-lg font-bold" style={{ fontFamily: "Lexend Deca, sans-serif" }}>
-            Application Status
-          </h1>
-          <button
-            onClick={() => nav("home")}
-            className="text-white text-xs font-bold hover:underline"
-          >
+      <div className="bg-[#F8FAFA] flex flex-col size-full font-sans select-none">
+        <div className="bg-[#115E59] flex items-center justify-between px-5 pt-12 pb-5 shrink-0 text-white shadow-xs">
+          <h1 className="text-white text-base font-bold">Application Status</h1>
+          <button onClick={() => nav("home")} className="text-[#CCFBF1] text-xs font-bold hover:underline">
             Back Home
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar p-6 flex flex-col items-center text-center gap-4">
-          <div
-            className={`size-20 rounded-full flex items-center justify-center text-3xl shadow-sm mt-2 ${
-              isApproved ? "bg-emerald-100 border-2 border-emerald-300" : "bg-teal-50 border-2 border-teal-200"
-            }`}
-          >
+          <div className="size-20 rounded-3xl bg-teal-50 border-2 border-teal-200 flex items-center justify-center text-3xl shadow-xs mt-2">
             {isApproved ? "✅" : "⏳"}
           </div>
 
           <div className="flex flex-col gap-1">
             <span
-              className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
-                isApproved
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-teal-100 text-[#0f766e]"
+              className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                isApproved ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-teal-50 text-[#0F766E] border-teal-200"
               }`}
             >
-              Status: {isApproved ? "Approved" : "Submitted / Under Review"}
+              Status: {isApproved ? "Approved" : "Under Review"}
             </span>
-            <h2 className="text-[#0f172a] text-xl font-bold tracking-tight mt-1" style={{ fontFamily: "Lexend Deca, sans-serif" }}>
+            <h2 className="text-[#1F2937] text-lg font-bold tracking-tight mt-1">
               {isApproved ? "Application Approved!" : "Application Under Review"}
             </h2>
-            <p className="text-[#64748b] text-xs leading-relaxed max-w-[280px]">
+            <p className="text-[#6B7280] text-xs leading-relaxed max-w-[280px]">
               {isApproved
-                ? "Congratulations! Your specialist application has been approved. You now have access to Service Provider Mode."
-                : "Your credentials and submitted documents have been received by the TapServe Verification Team in San Pablo City."}
+                ? "Congratulations! You now have full access to the TapServe Service Provider Console."
+                : "Your credentials and submitted clearances have been received by the TapServe Verification Team."}
             </p>
           </div>
 
-          {/* Submitted Summary */}
-          <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col gap-2 text-left w-full shadow-xs text-xs">
-            <span className="text-[#0f172a] font-bold">Applicant Summary</span>
-            <div className="flex justify-between py-1 border-b border-[#f1f5f9]">
-              <span className="text-[#64748b]">Full Name:</span>
-              <span className="font-semibold text-[#0f172a]">{fullName}</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-[#f1f5f9]">
-              <span className="text-[#64748b]">Service Category:</span>
-              <span className="font-semibold text-[#0f172a]">{category}</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-[#f1f5f9]">
-              <span className="text-[#64748b]">Specialization:</span>
-              <span className="font-semibold text-[#0f172a]">{specialization}</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-[#f1f5f9]">
-              <span className="text-[#64748b]">Experience:</span>
-              <span className="font-semibold text-[#0f172a]">{yearsExp} years</span>
-            </div>
-            <div className="flex justify-between py-1">
-              <span className="text-[#64748b]">Service Area:</span>
-              <span className="font-semibold text-[#0f172a]">San Pablo City, Laguna</span>
-            </div>
-          </div>
-
-          {/* Discreet Capstone Demo Approval Trigger */}
-          <div className="bg-[#fffbeb] border border-[#fde68a] p-3 rounded-2xl w-full flex flex-col gap-2 text-left">
+          {/* Discreet Capstone Presentation Helper */}
+          <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl w-full flex flex-col gap-2 text-left">
             <div className="flex items-center gap-1.5">
               <span className="text-sm">🎯</span>
-              <span className="text-[#92400e] text-xs font-bold">Capstone Presentation Helper</span>
+              <span className="text-amber-950 text-xs font-bold">Capstone Presentation Trigger</span>
             </div>
-            <p className="text-[#b45309] text-[11px] leading-relaxed">
-              Use this instant simulation button to advance status directly to Approved and test Provider Mode.
+            <p className="text-amber-900 text-[11px] leading-relaxed">
+              Advance status directly to Approved to test the redesigned Provider App interface.
             </p>
             <button
               onClick={() => {
@@ -292,426 +3843,132 @@ export function ProviderApplyScreen({
                   providerApplicationStatus: "Approved",
                 };
                 AppStorage.saveUser(approvedUser);
-                onToast("Simulated approval! Service Provider Mode unlocked.");
+                onToast("Simulated approval! Provider Mode unlocked.");
                 nav("provider-dashboard");
               }}
-              className="bg-[#0d9488] text-white text-xs font-bold py-2 rounded-xl active:brightness-90 touch-manipulation shadow-xs"
+              className="bg-[#115E59] text-white text-xs font-bold py-2.5 rounded-xl shadow-xs cursor-pointer"
             >
-              Simulate Instant Approval & Open Provider Mode →
+              Simulate Instant Approval & Open Provider App →
             </button>
           </div>
-
-          {isApproved ? (
-            <button
-              onClick={() => nav("provider-dashboard")}
-              className="bg-[#0d9488] text-white text-sm font-bold py-3.5 rounded-xl w-full active:brightness-90 touch-manipulation shadow-md mt-auto"
-            >
-              Enter Provider Mode Dashboard
-            </button>
-          ) : (
-            <button
-              onClick={() => nav("home")}
-              className="bg-slate-100 text-[#0f172a] text-xs font-bold py-3 rounded-xl w-full active:bg-slate-200 touch-manipulation mt-auto"
-            >
-              Return to User Home
-            </button>
-          )}
         </div>
       </div>
     );
   }
 
-  // ─── WIZARD STEPS 1 to 5 ───
-  const stepTitles = [
-    "",
-    "Personal Information",
-    "Service Information",
-    "Documents & Clearances",
-    "Terms and Conditions",
-    "Review Application",
-  ];
-
+  // Steps 1 to 5
   return (
-    <div className="bg-[#f8fafc] flex flex-col size-full">
-      {/* Step Header */}
-      <div className="bg-white border-b border-[#e2e8f0] flex flex-col gap-2.5 px-6 pt-12 pb-3 shrink-0">
+    <div className="bg-[#F8FAFA] flex flex-col size-full font-sans select-none">
+      <div className="bg-white border-b border-[#E5E7EB] px-5 pt-11 pb-3 flex flex-col gap-2 shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setStep((s) => s - 1)}
-            className="bg-[#f1f5f9] border border-[#e2e8f0] flex items-center justify-center rounded-xl size-9 active:bg-slate-200 touch-manipulation"
+            className="size-8 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-xs"
           >
-            <svg className="size-4 text-[#0f172a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
+            ←
           </button>
-          <div className="flex flex-col">
-            <h2 className="text-[#0f172a] text-sm font-bold" style={{ fontFamily: "Lexend Deca, sans-serif" }}>
-              Step {step} of 5: {stepTitles[step]}
-            </h2>
-            <span className="text-[#94a3b8] text-[10px]">TapServe Specialist Registration</span>
-          </div>
+          <span className="text-xs font-bold text-[#1F2937]">Step {step} of 5: Registration</span>
         </div>
-
-        {/* Progress Bar */}
-        <div className="flex gap-1.5 pt-1">
+        <div className="flex gap-1">
           {[1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
-              className={`h-1.5 flex-1 rounded-full transition-colors ${
-                i <= step ? "bg-[#0d9488]" : "bg-[#e2e8f0]"
-              }`}
+              className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-[#115E59]" : "bg-slate-200"}`}
             />
           ))}
         </div>
       </div>
 
-      {/* Step Body */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-3.5">
-        {/* ── STEP 1: Personal Info ── */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-3.5 text-xs">
         {step === 1 && (
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-[#0f172a] text-xs font-bold">Full Name</label>
+              <span className="font-bold text-[#1F2937]">Full Name</span>
               <input
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Juan Dela Cruz"
-                className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none focus:border-[#0d9488]"
-                required
+                className="bg-white border border-[#E5E7EB] p-2.5 rounded-xl outline-none"
               />
             </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-[#0f172a] text-xs font-bold">Date of Birth</label>
-                <input
-                  type="date"
-                  value={dob}
-                  onChange={(e) => setDob(e.target.value)}
-                  className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none focus:border-[#0d9488]"
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[#0f172a] text-xs font-bold">Age</label>
-                <input
-                  type="number"
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  placeholder="38"
-                  className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none focus:border-[#0d9488]"
-                  required
-                />
-              </div>
-            </div>
-
             <div className="flex flex-col gap-1">
-              <label className="text-[#0f172a] text-xs font-bold">Home Address</label>
-              <input
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Brgy., City, Province"
-                className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none focus:border-[#0d9488]"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[#0f172a] text-xs font-bold">Contact Number</label>
+              <span className="font-bold text-[#1F2937]">Contact Number</span>
               <input
                 value={contactNumber}
                 onChange={(e) => setContactNumber(e.target.value)}
-                placeholder="+63 9XX XXX XXXX"
-                className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none focus:border-[#0d9488]"
-                required
+                className="bg-white border border-[#E5E7EB] p-2.5 rounded-xl outline-none"
               />
             </div>
-
             <div className="flex flex-col gap-1">
-              <label className="text-[#0f172a] text-xs font-bold">Email Address</label>
+              <span className="font-bold text-[#1F2937]">Residential Address</span>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="specialist@email.com"
-                className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none focus:border-[#0d9488]"
-                required
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="bg-white border border-[#E5E7EB] p-2.5 rounded-xl outline-none"
               />
-            </div>
-
-            <div className="flex flex-col gap-1 pt-1">
-              <label className="text-[#0f172a] text-xs font-bold">Profile Photo</label>
-              {photoName ? (
-                <div className="flex items-center justify-between bg-white border border-[#ccfbf1] p-3 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">📷</span>
-                    <span className="text-xs font-semibold text-[#0f172a]">{photoName}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setPhotoName(null)}
-                    className="text-red-500 text-xs font-bold touch-manipulation"
-                  >
-                    Change
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setPhotoName("specialist_avatar.jpg")}
-                  className="border-2 border-dashed border-[#0d9488] bg-[#f0fdfa] p-3 rounded-xl text-xs font-bold text-[#0d9488] flex items-center justify-center gap-2 touch-manipulation"
-                >
-                  <span>📷</span>
-                  <span>Upload Professional Photo</span>
-                </button>
-              )}
             </div>
           </div>
         )}
 
-        {/* ── STEP 2: Service Info ── */}
         {step === 2 && (
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-[#0f172a] text-xs font-bold">Service Category</label>
-              <select
+              <span className="font-bold text-[#1F2937]">Service Category</span>
+              <input
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none"
-              >
-                {categoryOptions.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
+                className="bg-white border border-[#E5E7EB] p-2.5 rounded-xl outline-none"
+              />
             </div>
-
             <div className="flex flex-col gap-1">
-              <label className="text-[#0f172a] text-xs font-bold">Service Specialization</label>
+              <span className="font-bold text-[#1F2937]">Specialization</span>
               <input
                 value={specialization}
                 onChange={(e) => setSpecialization(e.target.value)}
-                placeholder="e.g. Master Plumber, Aircon Inverter Cleaning"
-                className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none focus:border-[#0d9488]"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[#0f172a] text-xs font-bold">Years of Experience</label>
-              <input
-                type="number"
-                value={yearsExp}
-                onChange={(e) => setYearsExp(e.target.value)}
-                placeholder="10"
-                className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none focus:border-[#0d9488]"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[#0f172a] text-xs font-bold">Service Description</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe your skillset and services..."
-                className="bg-white border border-[#e2e8f0] h-20 p-3 rounded-xl text-xs outline-none resize-none focus:border-[#0d9488]"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[#0f172a] text-xs font-bold">Service Area</label>
-              <input
-                value={serviceArea}
-                onChange={(e) => setServiceArea(e.target.value)}
-                placeholder="San Pablo City, Laguna"
-                className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none focus:border-[#0d9488]"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5 pt-1">
-              <label className="text-[#0f172a] text-xs font-bold">Working Days (Multi-select)</label>
-              <div className="flex flex-wrap gap-1.5">
-                {daysList.map((d) => {
-                  const isChecked = workingDays.includes(d);
-                  return (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => toggleDay(d)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors touch-manipulation ${
-                        isChecked
-                          ? "bg-[#0d9488] border-[#0d9488] text-white"
-                          : "bg-white border-[#e2e8f0] text-[#64748b]"
-                      }`}
-                    >
-                      {d.slice(0, 3)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[#0f172a] text-xs font-bold">Working Hours</label>
-              <input
-                value={workingHours}
-                onChange={(e) => setWorkingHours(e.target.value)}
-                placeholder="8:00 AM – 5:00 PM"
-                className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none focus:border-[#0d9488]"
+                className="bg-white border border-[#E5E7EB] p-2.5 rounded-xl outline-none"
               />
             </div>
           </div>
         )}
 
-        {/* ── STEP 3: Documents ── */}
-        {step === 3 && (
-          <div className="flex flex-col gap-3">
-            <p className="text-[#64748b] text-xs leading-relaxed">
-              Upload mock files for verification. In this demonstration, browser local file state simulates document submission.
+        {step >= 3 && step < 5 && (
+          <div className="bg-white border border-[#E5E7EB] p-4 rounded-2xl flex flex-col gap-2">
+            <span className="font-bold text-[#1F2937]">Verification Clearances</span>
+            <p className="text-[#6B7280]">
+              All clearances (PhilSys ID, TESDA NC II, and Barangay Clearance) are pre-loaded for presentation review.
             </p>
-
-            {[
-              { key: "govId", label: "Valid Government ID", defaultFile: "gov_id_front.jpg" },
-              { key: "proofAddress", label: "Proof of Address (Utility Bill)", defaultFile: "billing_statement.pdf" },
-              { key: "barangayClearance", label: "Barangay Clearance", defaultFile: "brgy_clearance.pdf" },
-              { key: "nbiClearance", label: "NBI / Police Clearance", defaultFile: "nbi_clearance.pdf" },
-              { key: "certifications", label: "TESDA / Trade Certifications (Optional)", defaultFile: "tesda_cert.pdf" },
-            ].map((d) => {
-              const file = docs[d.key];
-              return (
-                <div
-                  key={d.key}
-                  className="bg-white border border-[#e2e8f0] rounded-xl p-3 flex items-center justify-between shadow-xs"
-                >
-                  <div className="flex flex-col">
-                    <span className="text-[#0f172a] text-xs font-bold">{d.label}</span>
-                    <span className={`text-[11px] ${file ? "text-[#0d9488] font-mono" : "text-[#94a3b8]"}`}>
-                      {file ? `✓ ${file}` : "Not uploaded"}
-                    </span>
-                  </div>
-                  {file ? (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveDoc(d.key)}
-                      className="text-red-500 text-xs font-bold touch-manipulation hover:underline"
-                    >
-                      Remove
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleDocUpload(d.key, d.defaultFile)}
-                      className="bg-[#0d9488] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg active:brightness-90 touch-manipulation"
-                    >
-                      Upload
-                    </button>
-                  )}
-                </div>
-              );
-            })}
           </div>
         )}
 
-        {/* ── STEP 4: Provider Terms ── */}
-        {step === 4 && (
-          <div className="flex flex-col gap-3">
-            <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col gap-2.5 shadow-xs max-h-[300px] overflow-y-auto no-scrollbar text-xs">
-              <span className="text-[#0f172a] font-bold">TapServe Service Provider Agreement</span>
-              <p className="text-[#475569] leading-relaxed">
-                1. <strong>Verification:</strong> You verify that all information, licenses, and submitted clearance documents are genuine and accurate.
-              </p>
-              <p className="text-[#475569] leading-relaxed">
-                2. <strong>Direct Payment:</strong> Clients remit cash payments directly upon service completion.
-              </p>
-              <p className="text-[#475569] leading-relaxed">
-                3. <strong>Punctuality & Reliability:</strong> Accepting a booking commits your attendance. Cancellations should be avoided.
-              </p>
-              <p className="text-[#475569] leading-relaxed">
-                4. <strong>Safety & Conduct:</strong> Professionalism, respectful communication, and quality workmanship are mandatory.
-              </p>
-            </div>
-
-            <label className="bg-white border border-[#ccfbf1] p-3 rounded-xl flex items-start gap-2.5 cursor-pointer touch-manipulation">
-              <input
-                type="checkbox"
-                checked={termsAgreed}
-                onChange={(e) => setTermsAgreed(e.target.checked)}
-                className="accent-[#0d9488] size-4 rounded mt-0.5"
-              />
-              <span className="text-[#0f172a] text-xs font-semibold leading-relaxed">
-                I have read and agree to the TapServe Service Provider Terms and Conditions.
-              </span>
-            </label>
-          </div>
-        )}
-
-        {/* ── STEP 5: Review Application ── */}
         {step === 5 && (
-          <div className="flex flex-col gap-3 text-xs">
-            <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col gap-2 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-[#0f172a]">Personal Info</span>
-                <button onClick={() => setStep(1)} className="text-[#0d9488] font-bold">Edit</button>
-              </div>
-              <div className="flex justify-between text-[#64748b]">
-                <span>Name:</span> <span className="font-semibold text-[#0f172a]">{fullName}</span>
-              </div>
-              <div className="flex justify-between text-[#64748b]">
-                <span>Contact:</span> <span className="font-semibold text-[#0f172a]">{contactNumber}</span>
-              </div>
-              <div className="flex justify-between text-[#64748b]">
-                <span>Address:</span> <span className="font-semibold text-[#0f172a]">{address}</span>
-              </div>
+          <div className="bg-white border border-[#E5E7EB] p-4 rounded-2xl flex flex-col gap-2">
+            <span className="font-bold text-[#1F2937]">Review Application</span>
+            <div className="flex justify-between py-1 border-b border-[#F3F4F6]">
+              <span className="text-[#6B7280]">Name:</span>
+              <span className="font-semibold text-[#1F2937]">{fullName}</span>
             </div>
-
-            <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col gap-2 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-[#0f172a]">Service Specialty</span>
-                <button onClick={() => setStep(2)} className="text-[#0d9488] font-bold">Edit</button>
-              </div>
-              <div className="flex justify-between text-[#64748b]">
-                <span>Category:</span> <span className="font-semibold text-[#0f172a]">{category}</span>
-              </div>
-              <div className="flex justify-between text-[#64748b]">
-                <span>Specialization:</span> <span className="font-semibold text-[#0f172a]">{specialization}</span>
-              </div>
-              <div className="flex justify-between text-[#64748b]">
-                <span>Working Days:</span> <span className="font-semibold text-[#0f172a]">{workingDays.join(", ")}</span>
-              </div>
+            <div className="flex justify-between py-1 border-b border-[#F3F4F6]">
+              <span className="text-[#6B7280]">Category:</span>
+              <span className="font-semibold text-[#1F2937]">{category}</span>
             </div>
-
-            <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col gap-2 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-[#0f172a]">Verified Documents</span>
-                <button onClick={() => setStep(3)} className="text-[#0d9488] font-bold">Edit</button>
-              </div>
-              {Object.entries(docs).map(([k, v]) => (
-                <div key={k} className="flex justify-between text-[#64748b]">
-                  <span className="capitalize">{k}:</span>
-                  <span className="font-mono text-[#0d9488]">{v}</span>
-                </div>
-              ))}
+            <div className="flex justify-between py-1">
+              <span className="text-[#6B7280]">Location:</span>
+              <span className="font-semibold text-[#1F2937]">{address}</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Step Footer Navigation */}
-      <div className="bg-white border-t border-[#e2e8f0] p-4 flex gap-2 shrink-0">
+      <div className="p-4 bg-white border-t border-[#E5E7EB] flex gap-2">
         <button
           onClick={() => setStep((s) => s - 1)}
-          className="flex-1 bg-[#f1f5f9] text-[#64748b] text-xs font-bold py-3 rounded-xl touch-manipulation"
+          className="flex-1 py-3 bg-[#F8FAFA] text-[#6B7280] font-bold text-xs rounded-xl"
         >
           Previous
         </button>
-
         {step < 5 ? (
           <button
             onClick={() => setStep((s) => s + 1)}
-            disabled={step === 4 && !termsAgreed}
-            className="flex-1 bg-[#0d9488] text-white text-xs font-bold py-3 rounded-xl touch-manipulation active:brightness-90 disabled:opacity-50 shadow-xs"
+            className="flex-1 py-3 bg-[#115E59] text-white font-bold text-xs rounded-xl"
           >
             Continue
           </button>
@@ -719,624 +3976,11 @@ export function ProviderApplyScreen({
           <button
             onClick={handleSubmitFinal}
             disabled={submitting}
-            className="flex-1 bg-[#0d9488] text-white text-xs font-bold py-3 rounded-xl touch-manipulation active:brightness-90 shadow-md"
+            className="flex-1 py-3 bg-[#115E59] text-white font-bold text-xs rounded-xl shadow-xs"
           >
-            {submitting ? "Submitting Application…" : "Submit Application"}
+            {submitting ? "Submitting…" : "Submit Application"}
           </button>
         )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Provider Dashboard Screen ────────────────────────────────────────────────
-export function ProviderDashboardScreen({
-  nav,
-  goBack,
-  provider,
-  bookings,
-  onSwitchToUserMode,
-}: {
-  nav: (s: Screen) => void;
-  goBack: () => void;
-  provider: Provider;
-  bookings: Booking[];
-  onSwitchToUserMode: () => void;
-}) {
-  const [accepting, setAccepting] = useState(provider.isAcceptingBookings);
-
-  // Compute stats from bookings
-  const providerBookings = bookings.filter((b) => b.providerId === provider.id);
-  const pendingRequests = providerBookings.filter((b) => b.status === "Pending");
-  const upcomingJobs = providerBookings.filter(
-    (b) => b.status === "Accepted" || b.status === "On the Way" || b.status === "In Progress"
-  );
-  const completedJobs = providerBookings.filter((b) => b.status === "Completed");
-
-  return (
-    <div className="bg-[#f8fafc] flex flex-col size-full">
-      {/* Header */}
-      <div className="bg-[#115e59] px-6 pt-10 pb-5 shrink-0 text-white">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex flex-col">
-            <span className="text-[#ccfbf1] text-[11px] font-semibold uppercase tracking-wider">
-              Service Provider Mode
-            </span>
-            <h2 className="text-xl font-bold tracking-tight" style={{ fontFamily: "Lexend Deca, sans-serif" }}>
-              {provider.name}
-            </h2>
-          </div>
-          <button
-            onClick={onSwitchToUserMode}
-            className="bg-white/15 border border-white/20 flex items-center gap-1.5 px-3 py-1.5 rounded-full touch-manipulation active:bg-white/25"
-          >
-            <span className="text-xs">🔄</span>
-            <span className="text-white text-xs font-bold">User Mode</span>
-          </button>
-        </div>
-
-        {/* Accepting Bookings Toggle */}
-        <div className="bg-white/10 border border-white/15 rounded-2xl p-3.5 flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-white text-xs font-bold">Accepting Bookings</span>
-            <span className="text-[#ccfbf1] text-[10px]">
-              {accepting ? "You are visible in client search" : "Hidden from client search"}
-            </span>
-          </div>
-          <button
-            onClick={() => setAccepting(!accepting)}
-            className={`relative flex shrink-0 h-6 w-11 rounded-full transition-colors ${
-              accepting ? "bg-[#14b8a6]" : "bg-white/30"
-            }`}
-          >
-            <span
-              className={`inline-block size-5 rounded-full bg-white shadow transform transition-transform ${
-                accepting ? "translate-x-5" : "translate-x-0.5"
-              } mt-0.5`}
-            />
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-2.5">
-          {[
-            { label: "New Requests", val: pendingRequests.length, icon: "📋", col: "text-[#0f766e] bg-[#f0fdfa] border-[#ccfbf1]" },
-            { label: "Upcoming Jobs", val: upcomingJobs.length, icon: "📅", col: "text-amber-700 bg-amber-50 border-amber-200" },
-            { label: "Completed", val: provider.completedJobs + completedJobs.length, icon: "✅", col: "text-emerald-700 bg-emerald-50 border-emerald-200" },
-            { label: "Avg Rating", val: `${provider.rating} ★`, icon: "⭐", col: "text-indigo-700 bg-indigo-50 border-indigo-200" },
-          ].map((st) => (
-            <div key={st.label} className={`border rounded-2xl p-3.5 flex flex-col gap-1 ${st.col}`}>
-              <span className="text-lg">{st.icon}</span>
-              <span className="text-xl font-bold">{st.val}</span>
-              <span className="text-xs font-semibold">{st.label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Quick Actions Grid */}
-        <div className="flex flex-col gap-2">
-          <span className="text-[#0f172a] text-xs font-bold uppercase tracking-wider">
-            Quick Actions
-          </span>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: "Requests", icon: "📋", screen: "provider-booking-request" as Screen },
-              { label: "Availability", icon: "📅", screen: "provider-availability" as Screen },
-              { label: "Reviews", icon: "⭐", screen: "provider-reviews" as Screen },
-              { label: "Services", icon: "🛠️", screen: "provider-services" as Screen },
-              { label: "Messages", icon: "💬", screen: "messaging" as Screen },
-              { label: "Profile", icon: "👤", screen: "user-profile" as Screen },
-            ].map((q) => (
-              <button
-                key={q.label}
-                onClick={() => nav(q.screen)}
-                className="bg-white border border-[#e2e8f0] flex flex-col items-center justify-center p-3 rounded-2xl gap-1 active:bg-slate-50 touch-manipulation shadow-xs"
-              >
-                <span className="text-lg">{q.icon}</span>
-                <span className="text-[#0f172a] text-[11px] font-bold">{q.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Today's Jobs List */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[#0f172a] text-xs font-bold uppercase tracking-wider">
-              Active Service Jobs
-            </span>
-            <button
-              onClick={() => nav("provider-booking-request")}
-              className="text-[#0d9488] text-xs font-bold hover:underline"
-            >
-              View All
-            </button>
-          </div>
-
-          {upcomingJobs.length === 0 ? (
-            <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 text-center text-xs text-[#64748b]">
-              No active jobs at the moment.
-            </div>
-          ) : (
-            upcomingJobs.map((b) => (
-              <div
-                key={b.id}
-                className="bg-white border border-[#e2e8f0] rounded-2xl p-3.5 flex items-center justify-between shadow-xs"
-              >
-                <div className="flex flex-col">
-                  <span className="text-[#0f172a] text-xs font-bold">{b.clientName}</span>
-                  <span className="text-[#64748b] text-[11px]">{b.serviceDetail}</span>
-                  <span className="text-[#0d9488] text-[10px] font-semibold">📅 {b.date} · {b.time}</span>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="bg-[#ccfbf1] text-[#0f766e] text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    {b.status}
-                  </span>
-                  <button
-                    onClick={() => nav("provider-booking-request")}
-                    className="text-[#0d9488] text-[11px] font-bold hover:underline"
-                  >
-                    Manage →
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      <ProviderBottomNav active="dashboard" nav={nav} requestCount={pendingRequests.length} />
-    </div>
-  );
-}
-
-// ─── Provider Availability Screen ─────────────────────────────────────────────
-export function ProviderAvailabilityScreen({
-  nav,
-  goBack,
-  provider,
-  onSaveSchedule,
-  onToast,
-}: {
-  nav: (s: Screen) => void;
-  goBack: () => void;
-  provider: Provider;
-  onSaveSchedule: (workingDays: string[], hours: string) => void;
-  onToast: (msg: string) => void;
-}) {
-  const [days, setDays] = useState<string[]>(provider.workingDays);
-  const [startTime, setStartTime] = useState("8:00 AM");
-  const [endTime, setEndTime] = useState("5:00 PM");
-  const [accepting, setAccepting] = useState(provider.isAcceptingBookings);
-
-  const allDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-  const toggleDay = (d: string) => {
-    setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
-  };
-
-  const handleSave = () => {
-    onSaveSchedule(days, `${startTime} – ${endTime}`);
-    onToast("Working schedule updated successfully.");
-  };
-
-  return (
-    <div className="bg-[#f8fafc] flex flex-col size-full">
-      <div className="bg-[#115e59] flex items-center gap-3 px-5 pt-12 pb-5 shrink-0">
-        <button
-          onClick={goBack}
-          className="bg-white/15 flex items-center justify-center rounded-xl size-9 active:bg-white/25 touch-manipulation text-white"
-        >
-          <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 className="text-white text-lg font-bold flex-1" style={{ fontFamily: "Lexend Deca, sans-serif" }}>
-          My Availability
-        </h1>
-      </div>
-
-      <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4">
-        {/* Toggle */}
-        <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex items-center justify-between shadow-xs">
-          <div>
-            <p className="text-[#0f172a] text-xs font-bold">Accepting Bookings</p>
-            <p className="text-[#64748b] text-[11px]">Clients can schedule appointments</p>
-          </div>
-          <input
-            type="checkbox"
-            checked={accepting}
-            onChange={(e) => setAccepting(e.target.checked)}
-            className="accent-[#0d9488] size-5"
-          />
-        </div>
-
-        {/* Working Days */}
-        <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col gap-2.5 shadow-xs">
-          <span className="text-[#0f172a] text-xs font-bold uppercase tracking-wider">
-            Working Days
-          </span>
-          <div className="flex flex-col gap-2">
-            {allDays.map((d) => {
-              const active = days.includes(d);
-              return (
-                <div
-                  key={d}
-                  onClick={() => toggleDay(d)}
-                  className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${
-                    active ? "bg-[#f0fdfa] border-[#ccfbf1]" : "bg-[#f8fafc] border-[#e2e8f0]"
-                  }`}
-                >
-                  <span className={`text-xs font-semibold ${active ? "text-[#0f766e]" : "text-[#64748b]"}`}>
-                    {d}
-                  </span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      active ? "bg-[#0d9488] text-white" : "bg-slate-200 text-slate-500"
-                    }`}
-                  >
-                    {active ? "Available" : "Day Off"}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Operating Hours */}
-        <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col gap-2.5 shadow-xs">
-          <span className="text-[#0f172a] text-xs font-bold uppercase tracking-wider">
-            Operating Hours
-          </span>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="flex flex-col gap-1">
-              <span className="text-[#64748b]">Start Time</span>
-              <select
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="bg-[#f8fafc] border border-[#e2e8f0] h-10 px-2 rounded-xl outline-none"
-              >
-                <option>7:00 AM</option>
-                <option>8:00 AM</option>
-                <option>9:00 AM</option>
-                <option>10:00 AM</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-[#64748b]">End Time</span>
-              <select
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="bg-[#f8fafc] border border-[#e2e8f0] h-10 px-2 rounded-xl outline-none"
-              >
-                <option>4:00 PM</option>
-                <option>5:00 PM</option>
-                <option>6:00 PM</option>
-                <option>8:00 PM</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4 bg-white border-t border-[#e2e8f0]">
-        <button
-          onClick={handleSave}
-          className="bg-[#0d9488] text-white text-xs font-bold py-3 rounded-xl w-full active:brightness-90 touch-manipulation shadow-md"
-        >
-          Save Availability
-        </button>
-      </div>
-
-      <ProviderBottomNav active="availability" nav={nav} />
-    </div>
-  );
-}
-
-// ─── Provider Booking Requests & Active Job Status Progression ────────────────
-export function ProviderBookingRequestScreen({
-  nav,
-  goBack,
-  provider,
-  bookings,
-  onAcceptBooking,
-  onDeclineBooking,
-  onProgressJobStatus,
-}: {
-  nav: (s: Screen) => void;
-  goBack: () => void;
-  provider: Provider;
-  bookings: Booking[];
-  onAcceptBooking: (bookingId: string) => void;
-  onDeclineBooking: (bookingId: string) => void;
-  onProgressJobStatus: (bookingId: string, nextStatus: BookingStatus) => void;
-}) {
-  const providerBookings = bookings.filter((b) => b.providerId === provider.id);
-  const activeAndPending = providerBookings.filter((b) => b.status !== "Cancelled");
-
-  const statusWorkflow: Record<BookingStatus, BookingStatus | null> = {
-    Pending: "Accepted",
-    Accepted: "On the Way",
-    "On the Way": "In Progress",
-    "In Progress": "Completed",
-    Completed: null,
-    Cancelled: null,
-  };
-
-  return (
-    <div className="bg-[#f8fafc] flex flex-col size-full">
-      <div className="bg-[#115e59] flex items-center gap-3 px-5 pt-12 pb-5 shrink-0">
-        <button
-          onClick={goBack}
-          className="bg-white/15 flex items-center justify-center rounded-xl size-9 active:bg-white/25 touch-manipulation text-white"
-        >
-          <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 className="text-white text-lg font-bold flex-1" style={{ fontFamily: "Lexend Deca, sans-serif" }}>
-          Booking Requests & Active Jobs
-        </h1>
-      </div>
-
-      <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-3.5">
-        {activeAndPending.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-            <span className="text-3xl">📥</span>
-            <p className="text-[#0f172a] text-sm font-bold">No incoming requests</p>
-            <p className="text-[#64748b] text-xs">New client booking requests will appear here.</p>
-          </div>
-        ) : (
-          activeAndPending.map((b) => {
-            const nextStatus = statusWorkflow[b.status];
-            return (
-              <div
-                key={b.id}
-                className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col gap-3 shadow-xs"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-[#0f172a] text-sm font-bold">{b.clientName}</span>
-                    <span className="text-[#0d9488] text-xs font-semibold">{b.serviceDetail}</span>
-                    <span className="text-[#94a3b8] text-[10px] font-mono">ID: {b.id}</span>
-                  </div>
-                  <span className="bg-[#ccfbf1] text-[#0f766e] text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-[#99f6e4]">
-                    {b.status}
-                  </span>
-                </div>
-
-                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-2.5 text-xs flex flex-col gap-1">
-                  <div>📅 <span className="font-semibold text-[#0f172a]">{b.date} at {b.time}</span></div>
-                  <div>📍 <span className="text-[#64748b]">{b.address}</span></div>
-                  <div>📞 <span className="text-[#64748b]">{b.clientPhone}</span></div>
-                  {b.problemDescription && (
-                    <div className="pt-1 text-[#475569] italic">
-                      Notes: "{b.problemDescription}"
-                    </div>
-                  )}
-                </div>
-
-                {/* Status action buttons */}
-                {b.status === "Pending" ? (
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      onClick={() => onDeclineBooking(b.id)}
-                      className="flex-1 border border-red-200 text-red-600 text-xs font-bold py-2 rounded-xl active:bg-red-50 touch-manipulation"
-                    >
-                      Decline
-                    </button>
-                    <button
-                      onClick={() => onAcceptBooking(b.id)}
-                      className="flex-1 bg-[#0d9488] text-white text-xs font-bold py-2 rounded-xl active:brightness-90 touch-manipulation shadow-xs"
-                    >
-                      Accept Booking
-                    </button>
-                  </div>
-                ) : nextStatus ? (
-                  <div className="flex flex-col gap-2 pt-1">
-                    <button
-                      onClick={() => onProgressJobStatus(b.id, nextStatus)}
-                      className="bg-[#0d9488] text-white text-xs font-bold py-2.5 rounded-xl active:brightness-90 touch-manipulation shadow-xs flex items-center justify-center gap-1.5"
-                    >
-                      <span>🔄</span> Advance Job Status to: <strong>{nextStatus}</strong>
-                    </button>
-                    <span className="text-[10px] text-[#94a3b8] text-center">
-                      Advancing updates client live tracking and booking history
-                    </span>
-                  </div>
-                ) : (
-                  <div className="text-emerald-700 bg-emerald-50 text-xs font-bold p-2 rounded-xl text-center">
-                    ✓ Job Completed & Recorded
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      <ProviderBottomNav active="requests" nav={nav} />
-    </div>
-  );
-}
-
-// ─── Provider Reviews Screen ──────────────────────────────────────────────────
-export function ProviderReviewsScreen({
-  nav,
-  goBack,
-  provider,
-}: {
-  nav: (s: Screen) => void;
-  goBack: () => void;
-  provider: Provider;
-}) {
-  return (
-    <div className="bg-[#f8fafc] flex flex-col size-full">
-      <div className="bg-[#115e59] flex items-center gap-3 px-5 pt-12 pb-5 shrink-0">
-        <button
-          onClick={goBack}
-          className="bg-white/15 flex items-center justify-center rounded-xl size-9 active:bg-white/25 touch-manipulation text-white"
-        >
-          <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 className="text-white text-lg font-bold flex-1" style={{ fontFamily: "Lexend Deca, sans-serif" }}>
-          My Reviews & Rating
-        </h1>
-      </div>
-
-      <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4">
-        {/* Rating Overview */}
-        <div className="bg-white border border-[#e2e8f0] rounded-2xl p-5 flex items-center gap-5 shadow-xs">
-          <div className="flex flex-col items-center">
-            <span className="text-3xl font-bold text-[#0f172a]">{provider.rating}</span>
-            <div className="flex text-amber-400 text-xs">★★★★★</div>
-            <span className="text-[#64748b] text-[10px] mt-0.5">{provider.reviewCount} reviews</span>
-          </div>
-
-          <div className="flex-1 flex flex-col gap-1 text-[10px] text-[#64748b]">
-            <div className="flex items-center gap-2">
-              <span>5★</span>
-              <div className="flex-1 bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-[#0d9488] h-full w-[88%]" />
-              </div>
-              <span>88%</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>4★</span>
-              <div className="flex-1 bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-[#0d9488] h-full w-[10%]" />
-              </div>
-              <span>10%</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>3★</span>
-              <div className="flex-1 bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-[#0d9488] h-full w-[2%]" />
-              </div>
-              <span>2%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Reviews List */}
-        <div className="flex flex-col gap-3">
-          <span className="text-[#0f172a] text-xs font-bold uppercase tracking-wider">
-            Recent Client Feedback
-          </span>
-          {provider.reviews.map((r) => (
-            <div
-              key={r.id}
-              className="bg-white border border-[#e2e8f0] rounded-2xl p-4 flex flex-col gap-1.5 shadow-xs"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[#0f172a] text-xs font-bold">{r.userName}</span>
-                <span className="text-[#94a3b8] text-[10px]">{r.date}</span>
-              </div>
-              <div className="flex text-amber-400 text-xs">
-                {Array.from({ length: r.rating }).map((_, i) => (
-                  <span key={i}>★</span>
-                ))}
-              </div>
-              <p className="text-[#475569] text-xs leading-relaxed">{r.comment}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <ProviderBottomNav active="reviews" nav={nav} />
-    </div>
-  );
-}
-
-// ─── Provider Services Screen ─────────────────────────────────────────────────
-export function ProviderServicesScreen({
-  goBack,
-  provider,
-  onSaveServices,
-  onToast,
-}: {
-  goBack: () => void;
-  provider: Provider;
-  onSaveServices: (category: string, spec: string, rate: number, desc: string) => void;
-  onToast: (msg: string) => void;
-}) {
-  const [cat, setCat] = useState(provider.category);
-  const [spec, setSpec] = useState(provider.specialization);
-  const [rate, setRate] = useState(provider.hourlyRate.toString());
-  const [desc, setDesc] = useState(provider.description);
-
-  const handleSave = () => {
-    onSaveServices(cat, spec, parseInt(rate) || 350, desc);
-    onToast("Specialist profile & services updated!");
-    goBack();
-  };
-
-  return (
-    <div className="bg-[#f8fafc] flex flex-col size-full">
-      <div className="bg-[#115e59] flex items-center gap-3 px-5 pt-12 pb-5 shrink-0">
-        <button
-          onClick={goBack}
-          className="bg-white/15 flex items-center justify-center rounded-xl size-9 active:bg-white/25 touch-manipulation text-white"
-        >
-          <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h1 className="text-white text-lg font-bold flex-1" style={{ fontFamily: "Lexend Deca, sans-serif" }}>
-          My Services & Rates
-        </h1>
-      </div>
-
-      <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-3.5">
-        <div className="flex flex-col gap-1">
-          <label className="text-[#0f172a] text-xs font-bold">Category</label>
-          <input
-            value={cat}
-            onChange={(e) => setCat(e.target.value)}
-            className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-[#0f172a] text-xs font-bold">Specialization</label>
-          <input
-            value={spec}
-            onChange={(e) => setSpec(e.target.value)}
-            className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-[#0f172a] text-xs font-bold">Hourly Rate (₱)</label>
-          <input
-            type="number"
-            value={rate}
-            onChange={(e) => setRate(e.target.value)}
-            className="bg-white border border-[#e2e8f0] h-10 px-3 rounded-xl text-xs outline-none"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-[#0f172a] text-xs font-bold">Bio & Description</label>
-          <textarea
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            className="bg-white border border-[#e2e8f0] h-28 p-3 rounded-xl text-xs outline-none resize-none leading-relaxed"
-          />
-        </div>
-      </div>
-
-      <div className="p-4 bg-white border-t border-[#e2e8f0]">
-        <button
-          onClick={handleSave}
-          className="bg-[#0d9488] text-white text-xs font-bold py-3 rounded-xl w-full active:brightness-90 touch-manipulation shadow-md"
-        >
-          Save Changes
-        </button>
       </div>
     </div>
   );
