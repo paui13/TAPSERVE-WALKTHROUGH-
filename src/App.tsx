@@ -58,13 +58,17 @@ import {
 } from "./screens/ProfileScreens";
 
 import {
-  ProviderApplyScreen,
   ProviderDashboardScreen,
   ProviderAvailabilityScreen,
   ProviderBookingRequestScreen,
   ProviderReviewsScreen,
   ProviderServicesScreen,
 } from "./screens/ProviderModeScreens";
+
+import {
+  ProviderApplyScreen,
+  ProviderApplyStatusScreen,
+} from "./screens/ProviderRegistrationFlow";
 
 import { ChatbotScreen } from "./screens/ChatbotScreen";
 import { AdminPortal } from "./screens/AdminPortal";
@@ -257,7 +261,8 @@ export default function App() {
     AppStorage.saveProviderApplication(appData);
     const updatedUser: UserAccount = {
       ...currentUser,
-      providerApplicationStatus: "Submitted",
+      providerApplicationStatus: "Under Review",
+      subscriptionPlan: appData.subscriptionPlan || "yearly",
     };
     setCurrentUser(updatedUser);
     AppStorage.saveUser(updatedUser);
@@ -685,13 +690,22 @@ export default function App() {
         return <ProviderTermsScreen goBack={goBack} />;
 
       case "provider-apply":
-      case "provider-apply-status":
         return (
           <ProviderApplyScreen
             nav={navigate}
             goBack={goBack}
             currentUser={currentUser}
             onSubmitApplication={handleSubmitProviderApplication}
+            onToast={showToast}
+          />
+        );
+
+      case "provider-apply-status":
+        return (
+          <ProviderApplyStatusScreen
+            nav={navigate}
+            goBack={goBack}
+            currentUser={currentUser}
             onToast={showToast}
           />
         );

@@ -5,6 +5,7 @@ import {
   CredentialItem,
   DocumentReviewModal,
 } from "../components/DocumentReviewModal";
+import { AppStorage } from "../data/mockData";
 
 export type AdminTab =
   | "dashboard"
@@ -83,7 +84,8 @@ export function AdminPortal({
     docIndex: number;
   } | null>(null);
 
-  const [credentialsList, setCredentialsList] = useState<CredentialItem[]>([
+  const [credentialsList, setCredentialsList] = useState<CredentialItem[]>(() => {
+    const defaultList: CredentialItem[] = [
     {
       id: "cred-1",
       name: "Rogelio Dela Cruz",
@@ -415,7 +417,19 @@ export function AdminPortal({
         },
       ],
     },
-  ]);
+  ];
+    try {
+      const stored = AppStorage.getCredentials();
+      if (stored && stored.length > 0) {
+        const defaultIds = new Set(defaultList.map((d) => d.id));
+        const newSubmitted = stored.filter((s: any) => !defaultIds.has(s.id));
+        return [...newSubmitted, ...defaultList];
+      }
+    } catch {
+      // ignore
+    }
+    return defaultList;
+  });
 
   const handleUpdateDocStatus = (
     credentialId: string,
@@ -1112,24 +1126,56 @@ export function AdminPortal({
               selectedItem={selectedCredential}
               onSelectItem={setSelectedCredential}
               onApprove={(id) => {
-                setCredentialsList((prev) =>
-                  prev.map((c) => (c.id === id ? { ...c, status: "Verified" } : c))
-                );
+                setCredentialsList((prev) => {
+                  const updated = prev.map((c) => (c.id === id ? { ...c, status: "Verified" as const } : c));
+                  AppStorage.saveCredentials(updated);
+                  return updated;
+                });
                 if (selectedCredential?.id === id) {
                   setSelectedCredential((prev) =>
                     prev ? { ...prev, status: "Verified" } : null
                   );
                 }
-                onToast("Specialist credentials verified and approved!");
+                // Sync with currentUser in AppStorage
+                const curUser = AppStorage.getUser();
+                const updatedUser = {
+                  ...curUser,
+                  isProvider: true,
+                  providerApplicationStatus: "Approved" as const,
+                };
+                AppStorage.saveUser(updatedUser);
+                const appData = AppStorage.getProviderApplication();
+                if (appData) {
+                  AppStorage.saveProviderApplication({
+                    ...appData,
+                    status: "Approved",
+                  });
+                }
+                onToast("Specialist credentials verified and approved! Provider Mode unlocked.");
               }}
               onReject={(id) => {
-                setCredentialsList((prev) =>
-                  prev.map((c) => (c.id === id ? { ...c, status: "Rejected" } : c))
-                );
+                setCredentialsList((prev) => {
+                  const updated = prev.map((c) => (c.id === id ? { ...c, status: "Rejected" as const } : c));
+                  AppStorage.saveCredentials(updated);
+                  return updated;
+                });
                 if (selectedCredential?.id === id) {
                   setSelectedCredential((prev) =>
                     prev ? { ...prev, status: "Rejected" } : null
                   );
+                }
+                const curUser = AppStorage.getUser();
+                const updatedUser = {
+                  ...curUser,
+                  providerApplicationStatus: "Rejected" as const,
+                };
+                AppStorage.saveUser(updatedUser);
+                const appData = AppStorage.getProviderApplication();
+                if (appData) {
+                  AppStorage.saveProviderApplication({
+                    ...appData,
+                    status: "Rejected",
+                  });
                 }
                 onToast("Specialist application rejected.");
               }}

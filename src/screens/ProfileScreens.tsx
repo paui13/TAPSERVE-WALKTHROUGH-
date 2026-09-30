@@ -106,10 +106,54 @@ export function UserProfileScreen({
             </button>
           ))}
 
+          {/* Specialist Mode / Apply CTA */}
+          {isApprovedProvider ? (
+            <button
+              onClick={onSwitchToProviderMode}
+              className="bg-gradient-to-r from-[#115E59] to-[#0D9488] text-white flex gap-3.5 items-center p-3.5 rounded-2xl text-left active:brightness-95 transition-all touch-manipulation shadow-md mt-1 cursor-pointer"
+            >
+              <span className="text-xl shrink-0">🛠️</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-black">Switch to Specialist Mode</div>
+                <div className="text-[10px] text-[#CCFBF1]">Manage bookings, quotes & availability</div>
+              </div>
+              <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-lg">Open →</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                const app = AppStorage.getProviderApplication();
+                if (app || currentUser.providerApplicationStatus) {
+                  nav("provider-apply-status");
+                } else {
+                  nav("provider-apply");
+                }
+              }}
+              className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 flex gap-3.5 items-center p-3.5 rounded-2xl text-left active:bg-teal-100/60 transition-all touch-manipulation shadow-xs mt-1 cursor-pointer"
+            >
+              <span className="text-xl shrink-0">💼</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-black text-[#115E59]">
+                  {currentUser.providerApplicationStatus === "Under Review" || AppStorage.getProviderApplication()?.status === "Under Review"
+                    ? "Specialist Application Under Review"
+                    : "Earn as a TapServe Specialist"}
+                </div>
+                <div className="text-[10px] text-slate-500">
+                  {currentUser.providerApplicationStatus === "Under Review" || AppStorage.getProviderApplication()?.status === "Under Review"
+                    ? "Check credentials verification status"
+                    : "Apply to offer household services in San Pablo City"}
+                </div>
+              </div>
+              <span className="text-xs font-bold text-[#0F766E] bg-white border border-teal-200 px-2 py-0.5 rounded-lg shadow-2xs">
+                {currentUser.providerApplicationStatus === "Under Review" || AppStorage.getProviderApplication()?.status === "Under Review" ? "Status →" : "Apply →"}
+              </span>
+            </button>
+          )}
+
           {/* Log Out */}
           <button
             onClick={() => setShowLogoutModal(true)}
-            className="bg-red-50/70 border border-red-200 flex gap-3.5 items-center p-3.5 rounded-2xl text-left active:bg-red-100 transition-colors touch-manipulation mt-2 shadow-xs"
+            className="bg-red-50/70 border border-red-200 flex gap-3.5 items-center p-3.5 rounded-2xl text-left active:bg-red-100 transition-colors touch-manipulation mt-2 shadow-xs cursor-pointer"
           >
             <span className="text-xl shrink-0">🚪</span>
             <span className="flex-1 text-red-600 text-xs font-bold">Log Out</span>

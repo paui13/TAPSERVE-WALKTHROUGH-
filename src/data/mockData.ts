@@ -122,28 +122,55 @@ export interface UserAccount {
   isProvider: boolean;
   providerApplicationStatus?:
     | "None"
+    | "Draft"
     | "Submitted"
     | "Under Review"
+    | "Additional Information Required"
     | "Additional Documents Required"
     | "Approved"
     | "Rejected";
+  subscriptionPlan?: "monthly" | "yearly";
 }
 
 export interface ProviderApplicationData {
+  applicationId?: string;
   fullName: string;
+  firstName?: string;
+  lastName?: string;
   dob: string;
-  age: string;
+  age?: string;
   address: string;
+  province?: string;
+  city?: string;
+  barangay?: string;
   contactNumber: string;
   email: string;
+  gender?: string;
+  emergencyContactName?: string;
+  emergencyContactNumber?: string;
   profilePhotoName?: string;
   category: string;
+  categories?: string[];
+  otherCategorySpecified?: string;
   specialization: string;
   yearsExperience: string;
+  skills?: string[];
   description: string;
+  previousEmployer?: string;
+  trainingCertification?: string;
   serviceArea: string;
+  serviceAreas?: string[];
+  maxTravelDistance?: string;
   workingDays: string[];
   workingHours: string;
+  acceptEmergencyBookings?: boolean;
+  preferredNotice?: string;
+  idType?: string;
+  idNumber?: string;
+  idFrontFile?: string;
+  idBackFile?: string;
+  selfieFile?: string;
+  credentialFile?: string;
   documents: {
     govId?: string;
     proofAddress?: string;
@@ -153,8 +180,12 @@ export interface ProviderApplicationData {
     barangayClearance?: string;
     otherDocs?: string;
   };
+  pricing?: Record<string, { price: number; type: "Fixed" | "Starting From" | "Per Hour" }>;
+  subscriptionPlan?: "monthly" | "yearly";
+  subscriptionPaymentMethod?: string;
+  subscriptionFee?: number;
   termsAgreed: boolean;
-  status: "Submitted" | "Under Review" | "Additional Documents Required" | "Approved" | "Rejected";
+  status: "Draft" | "Submitted" | "Under Review" | "Additional Information Required" | "Additional Documents Required" | "Approved" | "Rejected";
   submittedAt: string;
 }
 
@@ -1977,6 +2008,8 @@ const STORAGE_KEYS = {
   ADDRESSES: "tapserve_addresses",
   NOTIFICATIONS: "tapserve_notifications",
   PROVIDER_APPLICATION: "tapserve_provider_app",
+  PROVIDER_APPLICATION_DRAFT: "tapserve_provider_app_draft",
+  CREDENTIALS: "tapserve_admin_credentials",
   ACTIVE_ROLE: "tapserve_active_role", // "user" | "provider"
 };
 
@@ -2173,6 +2206,46 @@ export class AppStorage {
     }
   }
 
+  static getProviderApplicationDraft(): any | null {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.PROVIDER_APPLICATION_DRAFT);
+      if (data) return JSON.parse(data);
+    } catch {
+      // ignore
+    }
+    return null;
+  }
+
+  static saveProviderApplicationDraft(draft: any | null) {
+    try {
+      if (!draft) {
+        localStorage.removeItem(STORAGE_KEYS.PROVIDER_APPLICATION_DRAFT);
+      } else {
+        localStorage.setItem(STORAGE_KEYS.PROVIDER_APPLICATION_DRAFT, JSON.stringify(draft));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  static getCredentials(): any[] | null {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CREDENTIALS);
+      if (data) return JSON.parse(data);
+    } catch {
+      // ignore
+    }
+    return null;
+  }
+
+  static saveCredentials(creds: any[]) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.CREDENTIALS, JSON.stringify(creds));
+    } catch {
+      // ignore
+    }
+  }
+
   static getActiveRole(): "user" | "provider" {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.ACTIVE_ROLE);
@@ -2201,6 +2274,8 @@ export class AppStorage {
       localStorage.removeItem(STORAGE_KEYS.ADDRESSES);
       localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
       localStorage.removeItem(STORAGE_KEYS.PROVIDER_APPLICATION);
+      localStorage.removeItem(STORAGE_KEYS.PROVIDER_APPLICATION_DRAFT);
+      localStorage.removeItem(STORAGE_KEYS.CREDENTIALS);
       localStorage.removeItem(STORAGE_KEYS.ACTIVE_ROLE);
     } catch {
       // ignore

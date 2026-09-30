@@ -528,7 +528,7 @@ export function LoginScreen({
           .
         </p>
 
-        {/* Functional Register as Service Provider Card */}
+        {/* Functional "Want to earn as a specialist?" CTA Card */}
         <div
           role="button"
           tabIndex={0}
@@ -536,50 +536,61 @@ export function LoginScreen({
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") nav("provider-apply");
           }}
-          className="bg-[#f0fdfa] border border-[#a7f3d0] flex items-center justify-between p-4 rounded-3xl w-full text-left cursor-pointer active:bg-[#ccfbf1]/50 touch-manipulation shadow-xs hover:border-[#5eead4] transition-all"
-          aria-label="Register as Service Provider"
+          className="bg-gradient-to-r from-[#f0fdfa] to-emerald-50/60 border-2 border-[#14b8a6]/40 flex items-center justify-between p-4 rounded-3xl w-full text-left cursor-pointer active:scale-[0.99] touch-manipulation shadow-xs hover:border-[#0f766e] transition-all group"
+          aria-label="Want to earn as a specialist? Apply as Service Provider"
         >
           <div className="flex items-center gap-3.5 min-w-0">
+            <div className="size-11 rounded-2xl bg-[#115e59] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:bg-[#0f766e] transition-colors">
+              <svg
+                className="size-6 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M20 7h-4V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"
+                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 00-8 0" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 12v2" />
+              </svg>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[11px] text-[#0f766e] font-extrabold uppercase tracking-wider">
+                Want to earn as a specialist?
+              </span>
+              <span className="text-[#1F2937] text-sm font-bold truncate">
+                Apply as Service Provider →
+              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] text-[#6b7280]">Join certified home pros in Laguna</span>
+                <span className="text-[10px] text-slate-300">•</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nav("provider-terms");
+                  }}
+                  className="text-[#0f766e] hover:underline text-[10px] font-semibold touch-manipulation cursor-pointer"
+                >
+                  Terms
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="size-8 rounded-full bg-white border border-[#14b8a6]/30 flex items-center justify-center text-[#0f766e] group-hover:translate-x-0.5 transition-transform shrink-0 shadow-2xs">
             <svg
-              className="size-7 text-[#0f766e] shrink-0"
+              className="size-4"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-              strokeWidth={1.8}
+              strokeWidth={2.5}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M20 7h-4V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"
-              />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 00-8 0" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 12v2" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[#0f766e] text-sm font-bold truncate">
-                Register as Service Provider →
-              </span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  nav("provider-terms");
-                }}
-                className="text-[#94a3b8] hover:text-[#0f766e] text-xs underline text-left touch-manipulation font-medium cursor-pointer"
-              >
-                View Service Provider Terms
-              </button>
-            </div>
           </div>
-          <svg
-            className="size-5 text-[#0f766e] shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
         </div>
 
         <div className="w-[139px] h-[5px] bg-black/40 rounded-full mt-1" />
