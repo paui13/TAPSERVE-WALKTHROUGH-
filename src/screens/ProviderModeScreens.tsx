@@ -329,7 +329,16 @@ export function ProviderDashboardScreen({
     | "support"
     | "notifications"
     | "ai-assistant"
+    | "subscription"
   >(null);
+
+  // Subscription & Plan Choice state (Monthly ₱120 vs Yearly ₱1,000)
+  const [subscriptionPlan, setSubscriptionPlan] = useState<"monthly" | "yearly">("yearly");
+  const [subscriptionPaymentMethod, setSubscriptionPaymentMethod] = useState<
+    "GCash" | "Maya" | "In-App Earnings" | "Bank Transfer"
+  >("GCash");
+  const [subscriptionStatus, setSubscriptionStatus] = useState<"Active" | "Renewal Due">("Active");
+  const [showSubscriptionReceipt, setShowSubscriptionReceipt] = useState(false);
 
   // Messages & Live Chat state
   const [conversations, setConversations] = useState<ChatConversation[]>(INITIAL_CONVERSATIONS);
@@ -606,6 +615,8 @@ export function ProviderDashboardScreen({
             todayJobsCount={upcomingJobs.length}
             nextBooking={nextBooking}
             pendingRequests={pendingRequests}
+            subscriptionPlan={subscriptionPlan}
+            onOpenSubscription={() => setActiveSubView("subscription")}
             onAcceptJob={handleAcceptJob}
             onDeclineJob={(id) => {
               const match = localBookings.find((b) => b.id === id);
@@ -691,6 +702,16 @@ export function ProviderDashboardScreen({
             servicesCount={services.length}
             isAvailable={isAvailable}
             vacationMode={vacationMode}
+            subscriptionPlan={subscriptionPlan}
+            onSelectSubscriptionPlan={(newPlan) => {
+              setSubscriptionPlan(newPlan);
+              triggerToast(
+                newPlan === "yearly"
+                  ? "Switched to Yearly Plan (₱1,000/yr)! You save 30%."
+                  : "Switched to Monthly Plan (₱120/mo). Flexible monthly billing enabled."
+              );
+            }}
+            onOpenSubscription={() => setActiveSubView("subscription")}
           />
         )}
       </main>
@@ -905,6 +926,47 @@ export function ProviderDashboardScreen({
         />
       )}
 
+      {/* 17. Sub-Views: Specialist Subscription & Plan Choice Modal */}
+      {activeSubView === "subscription" && (
+        <ProviderSubscriptionModal
+          provider={provider}
+          plan={subscriptionPlan}
+          onSelectPlan={(newPlan) => {
+            setSubscriptionPlan(newPlan);
+            triggerToast(
+              newPlan === "yearly"
+                ? "Switched to Yearly Plan (₱1,000/yr)! You save 30%."
+                : "Switched to Monthly Plan (₱120/mo). Flexible monthly billing enabled."
+            );
+          }}
+          paymentMethod={subscriptionPaymentMethod}
+          onChangePaymentMethod={setSubscriptionPaymentMethod}
+          status={subscriptionStatus}
+          onRenew={() => {
+            setSubscriptionStatus("Active");
+            triggerToast(
+              subscriptionPlan === "yearly"
+                ? "₱1,000 Annual Subscription renewed! Valid for another 12 months."
+                : "₱120 Monthly Subscription renewed! Valid for another 30 days."
+            );
+          }}
+          onViewReceipt={() => setShowSubscriptionReceipt(true)}
+          onClose={() => setActiveSubView(null)}
+          onToast={triggerToast}
+        />
+      )}
+
+      {/* 18. Official Subscription Digital Receipt Modal */}
+      {showSubscriptionReceipt && (
+        <ProviderSubscriptionReceiptModal
+          provider={provider}
+          plan={subscriptionPlan}
+          paymentMethod={subscriptionPaymentMethod}
+          onClose={() => setShowSubscriptionReceipt(false)}
+          onToast={triggerToast}
+        />
+      )}
+
       {/* ─── FLOATING AI ASSISTANT BUTTON (Tappy) ─── */}
       <FloatingAIButton onClick={() => setActiveSubView("ai-assistant")} />
 
@@ -937,6 +999,8 @@ function ProviderHomeView({
   todayJobsCount,
   nextBooking,
   pendingRequests,
+  subscriptionPlan = "yearly",
+  onOpenSubscription,
   onAcceptJob,
   onDeclineJob,
   onViewJobDetails,
@@ -952,6 +1016,8 @@ function ProviderHomeView({
   todayJobsCount: number;
   nextBooking?: Booking;
   pendingRequests: Booking[];
+  subscriptionPlan?: "monthly" | "yearly";
+  onOpenSubscription?: () => void;
   onAcceptJob: (id: string) => void;
   onDeclineJob: (id: string) => void;
   onViewJobDetails: (job: Booking) => void;
@@ -1042,6 +1108,34 @@ function ProviderHomeView({
             Rating
           </span>
         </div>
+      </div>
+
+      {/* ── Specialist Subscription & Membership Status Card ── */}
+      <div className="bg-gradient-to-r from-teal-900 via-[#115E59] to-[#0F766E] text-white p-3.5 rounded-2xl shadow-sm flex items-center justify-between relative overflow-hidden">
+        <div className="flex items-center gap-3 relative z-10">
+          <div className="size-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-lg shrink-0">
+            💎
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-white">
+                {subscriptionPlan === "yearly" ? "Annual Plan (₱1,000/yr)" : "Monthly Plan (₱120/mo)"}
+              </span>
+              <span className="text-[9px] bg-emerald-400 text-teal-950 font-extrabold px-1.5 py-0.2 rounded-full">
+                Active
+              </span>
+            </div>
+            <span className="text-[10px] text-teal-100 font-medium">
+              {subscriptionPlan === "yearly" ? "Save 30% • Verified Specialist Status Active" : "Flexible Monthly • Verified Specialist Status Active"}
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={onOpenSubscription}
+          className="relative z-10 bg-white hover:bg-teal-50 text-[#115E59] text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
+        >
+          Manage Plan →
+        </button>
       </div>
 
       {/* ── Next Booking Hero Card (Prominent Focus Point) ── */}
@@ -1803,6 +1897,9 @@ function ProviderProfileView({
   servicesCount,
   isAvailable,
   vacationMode,
+  subscriptionPlan = "yearly",
+  onSelectSubscriptionPlan,
+  onOpenSubscription,
 }: {
   provider: Provider;
   providers?: Provider[];
@@ -1812,6 +1909,9 @@ function ProviderProfileView({
   servicesCount: number;
   isAvailable: boolean;
   vacationMode: boolean;
+  subscriptionPlan?: "monthly" | "yearly";
+  onSelectSubscriptionPlan?: (plan: "monthly" | "yearly") => void;
+  onOpenSubscription?: () => void;
 }) {
   return (
     <div className="p-4 flex flex-col gap-4">
@@ -1863,9 +1963,76 @@ function ProviderProfileView({
         )}
       </div>
 
+      {/* ── Specialist Subscription & Membership Management Card ── */}
+      <div className="bg-white border-2 border-teal-600/30 rounded-2xl p-4 shadow-xs flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">💎</span>
+            <div>
+              <span className="text-xs font-bold text-[#1F2937] block">
+                TapServe Specialist Accreditation
+              </span>
+              <span className="text-[10px] text-[#0F766E] font-medium">
+                San Pablo City Certified Service Partner
+              </span>
+            </div>
+          </div>
+          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
+            Active Verified
+          </span>
+        </div>
+
+        {/* Current Plan Indicator & Quick Plan Toggle */}
+        <div className="bg-[#F8FAFA] p-3 rounded-xl border border-[#E5E7EB] flex flex-col gap-2.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[#6B7280]">Current Plan:</span>
+            <span className="font-extrabold text-[#115E59]">
+              {subscriptionPlan === "yearly" ? "Yearly Plan (₱1,000 / year)" : "Monthly Plan (₱120 / month)"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => onSelectSubscriptionPlan && onSelectSubscriptionPlan("monthly")}
+              className={`py-2 px-2.5 rounded-xl text-[11px] font-bold border transition-all flex flex-col items-center justify-center cursor-pointer ${
+                subscriptionPlan === "monthly"
+                  ? "bg-[#115E59] text-white border-[#115E59] shadow-xs"
+                  : "bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#115E59]/40"
+              }`}
+            >
+              <span>Monthly Plan</span>
+              <span className="text-[10px] font-semibold opacity-90">₱120 / month</span>
+            </button>
+
+            <button
+              onClick={() => onSelectSubscriptionPlan && onSelectSubscriptionPlan("yearly")}
+              className={`py-2 px-2.5 rounded-xl text-[11px] font-bold border transition-all flex flex-col items-center justify-center relative cursor-pointer ${
+                subscriptionPlan === "yearly"
+                  ? "bg-[#115E59] text-white border-[#115E59] shadow-xs"
+                  : "bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#115E59]/40"
+              }`}
+            >
+              <span className="absolute -top-2 right-2 bg-amber-500 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full shadow-2xs">
+                SAVE 30%
+              </span>
+              <span>Yearly Plan</span>
+              <span className="text-[10px] font-semibold opacity-90">₱1,000 / year</span>
+            </button>
+          </div>
+        </div>
+
+        <button
+          onClick={onOpenSubscription || (() => onOpenSubView("subscription"))}
+          className="w-full py-2 bg-[#F0FDFA] hover:bg-[#CCFBF1] text-[#0F766E] border border-[#99F6E4] text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+        >
+          <span>📑</span> View Subscription Benefits & Official Receipts →
+        </button>
+      </div>
+
       {/* ── Profile Sections List ── */}
       <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#F3F4F6] text-xs">
         {[
+          { label: "Subscription & Membership Plans", icon: "💎", sub: subscriptionPlan === "yearly" ? "Yearly Plan (₱1,000/yr) • Active (Save 30%)" : "Monthly Plan (₱120/mo) • Active", action: onOpenSubscription || (() => onOpenSubView("subscription")) },
           { label: "Tappy AI Business Copilot", icon: "🤖", sub: "Instant tips, schedule advice & earnings", action: () => onOpenSubView("ai-assistant") },
           { label: "My Services & Pricing", icon: "🛠️", sub: `${servicesCount} active offerings`, action: () => onOpenSubView("services") },
           { label: "Availability & Vacation Mode", icon: "📅", sub: vacationMode ? "Vacation Active" : "8:00 AM - 5:00 PM", action: () => onOpenSubView("availability") },
@@ -3624,6 +3791,420 @@ function ProviderAIAssistantModal({
             aria-label="Send message to Tappy"
           >
             ➤
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPECIALIST SUBSCRIPTION & MEMBERSHIP MODAL (Monthly vs Yearly Choice)
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderSubscriptionModal({
+  provider,
+  plan,
+  onSelectPlan,
+  paymentMethod,
+  onChangePaymentMethod,
+  status,
+  onRenew,
+  onViewReceipt,
+  onClose,
+  onToast,
+}: {
+  provider: Provider;
+  plan: "monthly" | "yearly";
+  onSelectPlan: (plan: "monthly" | "yearly") => void;
+  paymentMethod: "GCash" | "Maya" | "In-App Earnings" | "Bank Transfer";
+  onChangePaymentMethod: (pm: "GCash" | "Maya" | "In-App Earnings" | "Bank Transfer") => void;
+  status: "Active" | "Renewal Due";
+  onRenew: () => void;
+  onViewReceipt: () => void;
+  onClose: () => void;
+  onToast: (msg: string) => void;
+}) {
+  const [selectedMethod, setSelectedMethod] = useState(paymentMethod);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm max-h-[88vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        {/* Header */}
+        <div className="bg-[#115E59] text-white px-5 py-4 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-[#CCFBF1] uppercase font-bold tracking-wider">
+              Accreditation & Plans
+            </span>
+            <h3 className="text-base font-bold text-white flex items-center gap-1.5">
+              <span>💎</span> Specialist Subscription
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4 text-xs">
+          {/* Active Status Banner */}
+          <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl p-3.5 flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+                Current Status
+              </span>
+              <span className="text-xs font-bold text-[#115E59] mt-0.5">
+                {plan === "yearly" ? "Annual License (₱1,000 / yr)" : "Monthly License (₱120 / mo)"}
+              </span>
+              <span className="text-[10px] text-[#0F766E]">
+                Valid for {provider.name} in San Pablo City
+              </span>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+              Active Verified
+            </span>
+          </div>
+
+          {/* Interactive Plan Choice: Monthly vs Yearly */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-[#1F2937] text-xs">
+                Choose Subscription Plan:
+              </span>
+              <span className="text-[10px] text-[#0F766E] font-semibold">
+                Switch anytime
+              </span>
+            </div>
+
+            {/* Plan Card 1: Monthly (₱120 / month) */}
+            <div
+              onClick={() => onSelectPlan("monthly")}
+              className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col gap-2 relative ${
+                plan === "monthly"
+                  ? "bg-teal-50/50 border-[#115E59] shadow-xs"
+                  : "bg-white border-[#E5E7EB] hover:border-slate-300"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`size-4 rounded-full border-2 flex items-center justify-center ${
+                      plan === "monthly"
+                        ? "border-[#115E59] bg-[#115E59]"
+                        : "border-slate-300"
+                    }`}
+                  >
+                    {plan === "monthly" && (
+                      <span className="size-1.5 rounded-full bg-white" />
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-bold text-[#1F2937] text-xs block">
+                      Monthly Subscription
+                    </span>
+                    <span className="text-[10px] text-[#6B7280]">
+                      Flexible month-to-month billing
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-sm font-extrabold text-[#115E59]">
+                    ₱120
+                  </span>
+                  <span className="text-[10px] text-[#6B7280]"> / month</span>
+                </div>
+              </div>
+
+              {/* Monthly Features Checklist */}
+              <div className="grid grid-cols-2 gap-1 text-[10px] text-[#4B5563] pt-1 border-t border-[#E5E7EB]/70">
+                <span className="flex items-center gap-1">✓ Verified Specialist Badge</span>
+                <span className="flex items-center gap-1">✓ Unlimited Booking Leads</span>
+                <span className="flex items-center gap-1">✓ 10% Platform Commission</span>
+                <span className="flex items-center gap-1">✓ Cancel or switch anytime</span>
+              </div>
+            </div>
+
+            {/* Plan Card 2: Yearly (₱1,000 / year - Best Value) */}
+            <div
+              onClick={() => onSelectPlan("yearly")}
+              className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col gap-2 relative ${
+                plan === "yearly"
+                  ? "bg-gradient-to-br from-teal-50/70 to-emerald-50/70 border-[#115E59] shadow-xs"
+                  : "bg-white border-[#E5E7EB] hover:border-slate-300"
+              }`}
+            >
+              {/* Badge: Best Value & Save 30% */}
+              <div className="absolute -top-2.5 right-4 bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-xs flex items-center gap-1">
+                <span>⭐</span> BEST VALUE • SAVE 30%
+              </div>
+
+              <div className="flex items-center justify-between pt-0.5">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`size-4 rounded-full border-2 flex items-center justify-center ${
+                      plan === "yearly"
+                        ? "border-[#115E59] bg-[#115E59]"
+                        : "border-slate-300"
+                    }`}
+                  >
+                    {plan === "yearly" && (
+                      <span className="size-1.5 rounded-full bg-white" />
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-bold text-[#1F2937] text-xs block">
+                      Yearly Subscription
+                    </span>
+                    <span className="text-[10px] text-[#0F766E] font-medium">
+                      2+ Months FREE (Only ~₱83.33/mo)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-sm font-extrabold text-[#115E59]">
+                    ₱1,000
+                  </span>
+                  <span className="text-[10px] text-[#6B7280]"> / year</span>
+                </div>
+              </div>
+
+              {/* Yearly Features Checklist */}
+              <div className="grid grid-cols-2 gap-1 text-[10px] text-[#4B5563] pt-1 border-t border-[#E5E7EB]/70">
+                <span className="flex items-center gap-1 font-semibold text-[#115E59]">
+                  ✓ Priority Search Ranking
+                </span>
+                <span className="flex items-center gap-1 font-semibold text-[#115E59]">
+                  ✓ Save ₱440 per year
+                </span>
+                <span className="flex items-center gap-1">✓ BIR Official Tax Receipt</span>
+                <span className="flex items-center gap-1">✓ Priority Dispute Support</span>
+                <span className="flex items-center gap-1">✓ 10% Platform Commission</span>
+                <span className="flex items-center gap-1">✓ 1 Full Year Peace of Mind</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Method Selector */}
+          <div className="flex flex-col gap-2">
+            <span className="font-bold text-[#1F2937] text-xs">
+              Payment Method:
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: "GCash", label: "GCash", detail: "0917-***-1234", icon: "📱" },
+                { id: "Maya", label: "Maya", detail: "0917-***-1234", icon: "💳" },
+                { id: "In-App Earnings", label: "In-App Balance", detail: "₱12,450 Available", icon: "💰" },
+                { id: "Bank Transfer", label: "BDO / BPI", detail: "Direct Transfer", icon: "🏦" },
+              ].map((pm) => (
+                <button
+                  key={pm.id}
+                  onClick={() => {
+                    setSelectedMethod(pm.id as any);
+                    onChangePaymentMethod(pm.id as any);
+                    onToast(`Payment method set to ${pm.label}`);
+                  }}
+                  className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
+                    selectedMethod === pm.id
+                      ? "bg-[#115E59] text-white border-[#115E59] shadow-2xs"
+                      : "bg-white text-[#1F2937] border-[#E5E7EB] hover:bg-slate-50"
+                  }`}
+                >
+                  <span className="text-base">{pm.icon}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[11px] font-bold truncate">{pm.label}</span>
+                    <span
+                      className={`text-[9px] truncate ${
+                        selectedMethod === pm.id ? "text-teal-200" : "text-[#6B7280]"
+                      }`}
+                    >
+                      {pm.detail}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Platform Fee & Commission Rules Box */}
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex flex-col gap-1 text-[11px] text-amber-950">
+            <span className="font-bold flex items-center gap-1">
+              <span>ℹ️</span> TapServe Dual Revenue Model
+            </span>
+            <p className="text-[10px] leading-relaxed text-amber-900">
+              TapServe deducts a <strong>10% service commission</strong> on each completed job plus your chosen subscription (<strong>₱120 monthly</strong> or <strong>₱1,000 yearly</strong>) to maintain certified specialist background verification and platform operations in San Pablo City.
+            </p>
+          </div>
+
+          {/* Actions: Renew & View Receipt */}
+          <div className="flex flex-col gap-2 pt-1">
+            <button
+              onClick={onRenew}
+              className="w-full py-3 bg-[#115E59] hover:bg-[#0F766E] text-white font-bold rounded-2xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>💳</span>
+              <span>
+                {plan === "yearly"
+                  ? "Pay ₱1,000 Annual Subscription"
+                  : "Pay ₱120 Monthly Subscription"}
+              </span>
+            </button>
+
+            <button
+              onClick={onViewReceipt}
+              className="w-full py-2.5 bg-white border border-[#CBD5E1] hover:bg-slate-50 text-[#1F2937] font-semibold rounded-2xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-[11px]"
+            >
+              <span>📄</span> View & Download Official BIR Receipt
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OFFICIAL DIGITAL SUBSCRIPTION RECEIPT MODAL (BIR Form Demo)
+// ─────────────────────────────────────────────────────────────────────────────
+function ProviderSubscriptionReceiptModal({
+  provider,
+  plan,
+  paymentMethod,
+  onClose,
+  onToast,
+}: {
+  provider: Provider;
+  plan: "monthly" | "yearly";
+  paymentMethod: string;
+  onClose: () => void;
+  onToast: (msg: string) => void;
+}) {
+  const isYearly = plan === "yearly";
+  const amount = isYearly ? 1000 : 120;
+  const orNumber = `OR-SP-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+      <div className="bg-white w-full max-w-sm max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E5E7EB]">
+        {/* Header */}
+        <div className="bg-[#0F172A] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-emerald-400 text-base">✓</span>
+            <span className="text-xs font-bold text-white uppercase tracking-wider">
+              Official Platform Receipt
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="size-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-xs font-bold text-white transition-colors cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Receipt Document Body */}
+        <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4 text-xs font-mono bg-[#FAFAFA]">
+          {/* Top Receipt Header */}
+          <div className="border-b border-dashed border-[#CBD5E1] pb-3 text-center flex flex-col items-center gap-1">
+            <span className="font-sans font-black text-base text-[#0F172A] tracking-tight">
+              Tap<span className="text-[#0D9488]">Serve</span> Laguna Inc.
+            </span>
+            <span className="text-[10px] text-[#64748B] font-sans">
+              San Pablo City Service Provider Accreditation
+            </span>
+            <span className="text-[9px] text-[#94A3B8]">
+              TIN: 432-881-992-000 • VAT Registered
+            </span>
+            <div className="inline-block bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1 font-sans">
+              ✓ OFFICIAL DIGITAL RECEIPT
+            </div>
+          </div>
+
+          {/* Receipt Info */}
+          <div className="flex flex-col gap-1.5 text-[11px]">
+            <div className="flex justify-between">
+              <span className="text-[#64748B]">Receipt No:</span>
+              <span className="font-bold text-[#0F172A]">{orNumber}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#64748B]">Date & Time:</span>
+              <span className="font-semibold text-[#0F172A]">Oct 15, 2026 • 10:24 AM</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#64748B]">Specialist Name:</span>
+              <span className="font-bold text-[#0F172A]">{provider.name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#64748B]">Trade Category:</span>
+              <span className="font-semibold text-[#0F172A]">{provider.category}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#64748B]">Service Jurisdiction:</span>
+              <span className="font-semibold text-[#0F172A]">San Pablo City, Laguna</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#64748B]">Payment Channel:</span>
+              <span className="font-bold text-[#0F766E]">{paymentMethod}</span>
+            </div>
+          </div>
+
+          {/* Itemized Table */}
+          <div className="border-t border-b border-dashed border-[#CBD5E1] py-2.5 flex flex-col gap-2">
+            <div className="flex justify-between font-bold text-[#0F172A]">
+              <span>Description</span>
+              <span>Amount</span>
+            </div>
+            <div className="flex justify-between text-[#334155]">
+              <span>
+                {isYearly
+                  ? "TapServe Pro Annual Accreditation Pass (12 Mos)"
+                  : "TapServe Pro Monthly Accreditation Pass (30 Days)"}
+              </span>
+              <span>₱{amount.toLocaleString()}.00</span>
+            </div>
+            <div className="flex justify-between text-[10px] text-[#64748B]">
+              <span>12% Value Added Tax (VAT)</span>
+              <span>Included</span>
+            </div>
+          </div>
+
+          {/* Total */}
+          <div className="flex justify-between items-baseline font-bold text-sm text-[#0F172A]">
+            <span>TOTAL PAID:</span>
+            <span className="text-base font-black text-emerald-700">₱{amount.toLocaleString()}.00</span>
+          </div>
+
+          {/* Validity Period */}
+          <div className="bg-white border border-[#E2E8F0] p-2.5 rounded-xl flex items-center justify-between text-[10px] font-sans">
+            <span className="text-[#64748B]">Accreditation Valid Until:</span>
+            <span className="font-bold text-[#115E59]">
+              {isYearly ? "Oct 15, 2027 (1 Year)" : "Nov 15, 2026 (30 Days)"}
+            </span>
+          </div>
+
+          <div className="text-center text-[9px] text-[#94A3B8] font-sans leading-tight">
+            Thank you for being a certified TapServe provider. For business tax verification, present this official receipt.
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-3.5 bg-white border-t border-[#E5E7EB] flex gap-2 shrink-0">
+          <button
+            onClick={() => {
+              onToast("Receipt saved to device / Print triggered!");
+            }}
+            className="flex-1 py-2.5 bg-[#115E59] hover:bg-[#0F766E] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
+          >
+            <span>🖨️</span> Print / Save Receipt
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-[#1F2937] font-semibold text-xs rounded-xl transition-colors cursor-pointer"
+          >
+            Close
           </button>
         </div>
       </div>

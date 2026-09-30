@@ -2734,11 +2734,11 @@ const INITIAL_SUBSCRIPTIONS: ProviderSubscriptionRecord[] = [
     providerName: "Cardo Santos",
     providerInitials: "CS",
     category: "Carpentry",
-    planName: "TapServe Pro Annual License",
-    amount: 1000,
-    paymentMethod: "Bank Transfer",
-    startDate: "Sep 28, 2026",
-    renewalDate: "Sep 28, 2027",
+    planName: "TapServe Pro Monthly License",
+    amount: 120,
+    paymentMethod: "GCash",
+    startDate: "Oct 01, 2026",
+    renewalDate: "Nov 01, 2026",
     status: "Active (Paid)",
     receiptRef: "OR-SP-99104",
   },
@@ -2790,11 +2790,11 @@ const INITIAL_SUBSCRIPTIONS: ProviderSubscriptionRecord[] = [
     providerName: "Benito Ramos",
     providerInitials: "BR",
     category: "Gardening",
-    planName: "TapServe Pro Annual License",
-    amount: 1000,
+    planName: "TapServe Pro Monthly License",
+    amount: 120,
     paymentMethod: "GCash",
-    startDate: "Oct 20, 2026",
-    renewalDate: "Oct 20, 2027",
+    startDate: "Oct 02, 2026",
+    renewalDate: "Nov 02, 2026",
     status: "Active (Paid)",
     receiptRef: "OR-SP-99108",
   },
@@ -2818,11 +2818,11 @@ const INITIAL_SUBSCRIPTIONS: ProviderSubscriptionRecord[] = [
     providerName: "Lourdes Garcia",
     providerInitials: "LG",
     category: "Cleaning",
-    planName: "TapServe Pro Annual License",
-    amount: 1000,
+    planName: "TapServe Pro Monthly License",
+    amount: 120,
     paymentMethod: "Maya",
-    startDate: "Oct 25, 2026",
-    renewalDate: "Oct 25, 2027",
+    startDate: "Oct 04, 2026",
+    renewalDate: "Nov 04, 2026",
     status: "Active (Paid)",
     receiptRef: "OR-SP-99110",
   },
@@ -2846,6 +2846,9 @@ function SalesAndSubscriptionsView({
     useState<ProviderSubscriptionRecord | null>(null);
   const [commissionRate, setCommissionRate] = useState<number>(10);
   const [annualFee, setAnnualFee] = useState<number>(1000);
+  const [subscriptionPlanFilter, setSubscriptionPlanFilter] = useState<
+    "all" | "yearly" | "monthly"
+  >("all");
 
   // Financial calculations
   const totalGrossBookingVolume = bookings.reduce((sum, b) => sum + b.amount, 0);
@@ -2854,28 +2857,37 @@ function SalesAndSubscriptionsView({
   const totalSubscriptionRevenue = subscriptionsList.reduce((sum, s) => sum + s.amount, 0);
   const totalPlatformNetSales = totalCommissionCut + totalSubscriptionRevenue;
 
-  // Filter subscriptions based on search
-  const filteredSubscriptions = subscriptionsList.filter(
-    (s) =>
+  const yearlySubsCount = subscriptionsList.filter((s) => s.planName.includes("Annual")).length;
+  const monthlySubsCount = subscriptionsList.filter((s) => s.planName.includes("Monthly")).length;
+
+  // Filter subscriptions based on search and plan
+  const filteredSubscriptions = subscriptionsList.filter((s) => {
+    const matchesSearch =
       s.providerName.toLowerCase().includes(globalSearch.toLowerCase()) ||
       s.category.toLowerCase().includes(globalSearch.toLowerCase()) ||
       s.invoiceNo.toLowerCase().includes(globalSearch.toLowerCase()) ||
-      s.receiptRef.toLowerCase().includes(globalSearch.toLowerCase())
-  );
+      s.receiptRef.toLowerCase().includes(globalSearch.toLowerCase());
+
+    if (!matchesSearch) return false;
+    if (subscriptionPlanFilter === "yearly") return s.planName.includes("Annual");
+    if (subscriptionPlanFilter === "monthly") return s.planName.includes("Monthly");
+    return true;
+  });
 
   const handleRenewSubscription = (subId: string) => {
     setSubscriptionsList((prev) =>
       prev.map((s) => {
         if (s.id !== subId) return s;
+        const isYearly = s.planName.includes("Annual");
         return {
           ...s,
           status: "Active (Paid)",
-          renewalDate: "Oct 2027",
-          amount: s.amount + 1000,
+          renewalDate: isYearly ? "Oct 2027" : "Nov 2026",
+          amount: s.amount + (isYearly ? 1000 : 120),
         };
       })
     );
-    onToast("₱1,000 Annual Subscription renewed! Valid for another 12 months.");
+    onToast("Subscription renewed successfully!");
   };
 
   return (
@@ -2926,25 +2938,25 @@ function SalesAndSubscriptionsView({
           </div>
         </div>
 
-        {/* ₱1,000 Annual Subscription Card */}
+        {/* Specialist Subscriptions Card */}
         <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-[#0D9488]/40 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
-              Annual Subscriptions
+              Specialist Subscriptions
             </span>
             <span className="size-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs font-bold border border-emerald-100">
-              ₱1k
+              💎
             </span>
           </div>
           <div className="my-2">
             <h2 className="text-3xl font-bold text-[#0F172A] tracking-tight">₱{totalSubscriptionRevenue.toLocaleString()}</h2>
             <span className="text-[11px] text-emerald-700 font-bold">
-              {subscriptionsList.length} Active Subscribed Specialists
+              {yearlySubsCount} Yearly (₱1k) • {monthlySubsCount} Monthly (₱120)
             </span>
           </div>
           <div className="pt-2 border-t border-[#F1F5F9] flex items-center justify-between text-[11px] text-[#64748B]">
-            <span>Subscription Rate:</span>
-            <span className="font-bold text-[#0F172A]">₱{annualFee.toLocaleString()} / specialist / year</span>
+            <span>Subscription Rates:</span>
+            <span className="font-bold text-[#0F172A]">₱120/mo or ₱1,000/yr</span>
           </div>
         </div>
 
@@ -2976,7 +2988,7 @@ function SalesAndSubscriptionsView({
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {[
             { id: "overview", label: "Financial Overview", icon: "📊" },
-            { id: "subscriptions", label: `₱1,000 Annual Subscriptions (${subscriptionsList.length})`, icon: "📑" },
+            { id: "subscriptions", label: `Subscriptions (${subscriptionsList.length})`, icon: "💎" },
             { id: "commission", label: `10% Commission Ledger (${bookings.length})`, icon: "🧾" },
             { id: "settings", label: "Monetization Rules", icon: "⚙️" },
           ].map((tab) => (
@@ -3128,19 +3140,51 @@ function SalesAndSubscriptionsView({
         </div>
       )}
 
-      {/* ─── SUB-TAB 2: ₱1,000 ANNUAL SUBSCRIPTIONS TABLE ─── */}
+      {/* ─── SUB-TAB 2: SPECIALIST SUBSCRIPTIONS TABLE (Monthly & Yearly) ─── */}
       {salesSubTab === "subscriptions" && (
         <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 flex flex-col gap-4 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#F1F5F9]">
             <div className="flex flex-col">
-              <h3 className="text-sm font-bold text-[#0F172A]">₱1,000 Annual Specialist Subscriptions</h3>
+              <h3 className="text-sm font-bold text-[#0F172A]">Specialist Subscriptions (Monthly & Yearly)</h3>
               <span className="text-xs text-[#64748B]">
-                Registered and verified trade service providers paying ₱1,000/year platform fee in San Pablo City
+                Registered and verified trade service providers with choice of Monthly (₱120) or Yearly (₱1,000) plans
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#0D9488] bg-teal-50 px-3 py-1 rounded-xl border border-teal-200">
-                ₱{totalSubscriptionRevenue.toLocaleString()} Annual Fees Collected
+              <div className="flex bg-[#F1F5F9] p-1 rounded-xl gap-1 text-xs">
+                <button
+                  onClick={() => setSubscriptionPlanFilter("all")}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                    subscriptionPlanFilter === "all"
+                      ? "bg-white text-[#115E59] shadow-2xs"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  All ({subscriptionsList.length})
+                </button>
+                <button
+                  onClick={() => setSubscriptionPlanFilter("yearly")}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                    subscriptionPlanFilter === "yearly"
+                      ? "bg-white text-[#115E59] shadow-2xs"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  Yearly ₱1k ({yearlySubsCount})
+                </button>
+                <button
+                  onClick={() => setSubscriptionPlanFilter("monthly")}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                    subscriptionPlanFilter === "monthly"
+                      ? "bg-white text-[#115E59] shadow-2xs"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  Monthly ₱120 ({monthlySubsCount})
+                </button>
+              </div>
+              <span className="text-xs font-bold text-[#0D9488] bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-200">
+                ₱{totalSubscriptionRevenue.toLocaleString()} Collected
               </span>
             </div>
           </div>

@@ -212,16 +212,16 @@ export function HomeScreen({
     <div className="bg-[#f8fafc] flex flex-col justify-between size-full relative">
       <div className="flex flex-col flex-1 overflow-y-auto no-scrollbar">
         {/* ─── Top Header: Brand Logo, Location & Notifications Bell ─── */}
-        <div className="bg-white border-b border-[#f1f5f9] px-6 pt-5 pb-4 shrink-0 shadow-xs">
-          <div className="flex items-center justify-between pb-3">
+        <div className="bg-white border-b border-[#f1f5f9] px-5 pt-4 pb-3.5 shrink-0 shadow-xs">
+          <div className="flex items-center justify-between gap-2 pb-2.5">
             {/* Logo + Brand Name */}
-            <div className="flex items-center gap-3">
-              <div className="size-12 rounded-2xl bg-white border-2 border-[#ccfbf1] p-1 flex items-center justify-center shadow-xs shrink-0">
-                <TapServeIcon size={40} />
+            <div className="flex items-center gap-2.5 shrink-0">
+              <div className="size-10 rounded-xl bg-white border-2 border-[#ccfbf1] p-0.5 flex items-center justify-center shadow-xs shrink-0">
+                <TapServeIcon size={34} />
               </div>
               <div className="flex items-baseline">
                 <span
-                  className="text-[#0f172a] text-[26px] font-black tracking-tight leading-none"
+                  className="text-[#0f172a] text-[23px] font-black tracking-tight leading-none"
                   style={{ fontFamily: "Lexend Deca, sans-serif" }}
                 >
                   Tap<span className="text-[#0d9488]">Serve</span>
@@ -230,11 +230,11 @@ export function HomeScreen({
             </div>
 
             {/* Location Pill & Notifications Bell */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => onToast("Service Area: San Pablo City & nearby Laguna municipalities.")}
-                className="bg-[#f0fdfa] border border-[#ccfbf1] flex gap-1.5 items-center px-2.5 py-1.5 rounded-full shrink-0 hover:bg-[#ccfbf1] transition-colors"
-                title="Service Area"
+                className="bg-[#f0fdfa] border border-[#ccfbf1] flex gap-1.5 items-center px-2.5 py-1.5 rounded-full shrink-0 hover:bg-[#ccfbf1] transition-colors cursor-pointer shadow-2xs active:scale-95"
+                title="Service Area: San Pablo City"
               >
                 <svg
                   className="size-3.5 text-[#0f766e]"
@@ -259,24 +259,14 @@ export function HomeScreen({
                 </span>
               </button>
 
-              {/* Quick Switch to Provider Mode */}
-              <button
-                onClick={() => nav("provider-dashboard")}
-                className="bg-[#f0fdfa] border border-[#ccfbf1] text-[#0f766e] hover:bg-[#ccfbf1] flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold shadow-2xs transition-colors cursor-pointer"
-                title="Open Provider Mode"
-              >
-                <span>👷</span>
-                <span className="hidden sm:inline">Provider</span>
-              </button>
-
               {/* Notifications Bell with Unread Badge */}
               <button
                 onClick={() => setShowNotifications(true)}
-                className="relative bg-white border border-[#e2e8f0] p-2 rounded-full hover:bg-slate-50 transition-colors shadow-xs touch-manipulation cursor-pointer"
+                className="relative bg-white border border-[#e2e8f0] size-9 rounded-full flex items-center justify-center hover:bg-slate-50 transition-colors shadow-xs touch-manipulation cursor-pointer shrink-0 active:scale-95"
                 aria-label="View notifications"
               >
                 <svg
-                  className="size-5 text-[#334155]"
+                  className="size-4.5 text-[#334155]"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
