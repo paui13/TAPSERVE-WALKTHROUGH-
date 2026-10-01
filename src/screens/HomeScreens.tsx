@@ -568,8 +568,124 @@ export function HomeScreen({
           </div>
         )}
 
+        {/* ─── AI Recommended Specialists (First Section) ─── */}
+        <div className="flex flex-col gap-3 pt-3 pb-3 px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-1.5 items-center">
+              <svg
+                className="size-4 text-[#0d9488]"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
+              <h3
+                className="text-[#0f172a] text-base font-bold"
+                style={{ fontFamily: "Lexend Deca, sans-serif" }}
+              >
+                AI Recommended for You
+              </h3>
+            </div>
+            <span className="text-[#94a3b8] text-[11px] font-semibold">
+              Near your location
+            </span>
+          </div>
+
+          {recommendedProviders.map((p) => {
+            const isFav = favorites.includes(p.id);
+            return (
+              <div
+                key={p.id}
+                className="bg-white border border-[#e2e8f0] flex gap-3.5 items-center p-3.5 rounded-2xl text-left w-full shadow-xs active:bg-slate-50 transition-colors relative"
+              >
+                <div
+                  onClick={() => {
+                    onSelectProvider(p);
+                    nav("provider-profile");
+                  }}
+                  className="flex gap-3.5 items-center flex-1 min-w-0 cursor-pointer"
+                >
+                  <div className="relative rounded-2xl shrink-0 size-16 overflow-hidden border border-[#e2e8f0]">
+                    <img
+                      src={p.photo}
+                      className="size-full object-cover"
+                      alt={p.name}
+                    />
+                  </div>
+                  <div className="flex flex-1 flex-col gap-0.5 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[#0f172a] text-sm font-bold truncate">
+                        {p.name}
+                      </span>
+                      {p.isVerified && <VerifiedBadge />}
+                    </div>
+                    <span className="text-[#64748b] text-xs font-medium truncate">
+                      {p.specialization}
+                    </span>
+                    <div className="flex items-center gap-3 pt-0.5">
+                      <div className="flex gap-1 items-center">
+                        <svg className="size-3 text-amber-500 fill-amber-500" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        <span className="text-[#0f172a] text-xs font-bold">
+                          {p.rating}
+                        </span>
+                        <span className="text-[#94a3b8] text-[11px]">
+                          ({p.reviewCount})
+                        </span>
+                      </div>
+                      <span className="text-[#64748b] text-[11px]">
+                        📍 {p.distance}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <button
+                    onClick={() => {
+                      toggleFavorite(p.id);
+                      onToast(
+                        isFav
+                          ? `${p.name} removed from favorites.`
+                          : `${p.name} added to favorites!`
+                      );
+                    }}
+                    className="p-1 touch-manipulation"
+                    aria-label="Toggle favorite"
+                  >
+                    <svg
+                      className={`size-5 transition-colors ${
+                        isFav ? "text-[#f97316] fill-[#f97316]" : "text-[#cbd5e1]"
+                      }`}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                      />
+                    </svg>
+                  </button>
+                  <span className="text-[#0f766e] text-xs font-bold">
+                    ₱{p.hourlyRate}/hr
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {/* ─── Available Now / Available Today (Horizontal Section) ─── */}
-        <div className="flex flex-col gap-3 pt-3 pb-4">
+        <div className="flex flex-col gap-3 pt-2 pb-4">
           <div className="flex items-center justify-between px-6">
             <div className="flex items-center gap-2 min-w-0">
               <span className="size-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
@@ -781,121 +897,6 @@ export function HomeScreen({
           </div>
         )}
 
-        {/* ─── AI Recommended Specialists ─── */}
-        <div className="flex flex-col gap-3 pb-6 px-6 pt-2">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-1.5 items-center">
-              <svg
-                className="size-4 text-[#0d9488]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-              <h3
-                className="text-[#0f172a] text-base font-bold"
-                style={{ fontFamily: "Lexend Deca, sans-serif" }}
-              >
-                AI Recommended for You
-              </h3>
-            </div>
-            <span className="text-[#94a3b8] text-[11px] font-semibold">
-              Near San Pablo City
-            </span>
-          </div>
-
-          {recommendedProviders.map((p) => {
-            const isFav = favorites.includes(p.id);
-            return (
-              <div
-                key={p.id}
-                className="bg-white border border-[#e2e8f0] flex gap-3.5 items-center p-3.5 rounded-2xl text-left w-full shadow-xs active:bg-slate-50 transition-colors relative"
-              >
-                <div
-                  onClick={() => {
-                    onSelectProvider(p);
-                    nav("provider-profile");
-                  }}
-                  className="flex gap-3.5 items-center flex-1 min-w-0 cursor-pointer"
-                >
-                  <div className="relative rounded-2xl shrink-0 size-16 overflow-hidden border border-[#e2e8f0]">
-                    <img
-                      src={p.photo}
-                      className="size-full object-cover"
-                      alt={p.name}
-                    />
-                  </div>
-                  <div className="flex flex-1 flex-col gap-0.5 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[#0f172a] text-sm font-bold truncate">
-                        {p.name}
-                      </span>
-                      {p.isVerified && <VerifiedBadge />}
-                    </div>
-                    <span className="text-[#64748b] text-xs font-medium truncate">
-                      {p.specialization}
-                    </span>
-                    <div className="flex items-center gap-3 pt-0.5">
-                      <div className="flex gap-1 items-center">
-                        <svg className="size-3 text-amber-500 fill-amber-500" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        <span className="text-[#0f172a] text-xs font-bold">
-                          {p.rating}
-                        </span>
-                        <span className="text-[#94a3b8] text-[11px]">
-                          ({p.reviewCount})
-                        </span>
-                      </div>
-                      <span className="text-[#64748b] text-[11px]">
-                        📍 {p.distance}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  <button
-                    onClick={() => {
-                      toggleFavorite(p.id);
-                      onToast(
-                        isFav
-                          ? `${p.name} removed from favorites.`
-                          : `${p.name} added to favorites!`
-                      );
-                    }}
-                    className="p-1 touch-manipulation"
-                    aria-label="Toggle favorite"
-                  >
-                    <svg
-                      className={`size-5 transition-colors ${
-                        isFav ? "text-[#f97316] fill-[#f97316]" : "text-[#cbd5e1]"
-                      }`}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        stroke="currentColor"
-                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-                      />
-                    </svg>
-                  </button>
-                  <span className="text-[#0f766e] text-xs font-bold">
-                    ₱{p.hourlyRate}/hr
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
 
         {/* ─── Favorite Providers Preview ─── */}
         {favoriteProviders.length > 0 && (
