@@ -126,10 +126,10 @@ export function ChatbotScreen({
         botReply =
           "For electrical wiring, panel upgrades, and short circuit issues, Kuya Jose is a registered master electrician available today.";
         buttons = [{ label: "View Electricians →", action: () => nav("browse") }];
-      } else if (lower.includes("aircon") || lower.includes("inverter") || lower.includes("freon")) {
+      } else if (lower.includes("paint") || lower.includes("pintor") || lower.includes("pest") || lower.includes("moving") || lower.includes("lipat")) {
         botReply =
-          "Need aircon chemical cleaning or freon replenishment? Ate Grace services split-type and window-type inverter units.";
-        buttons = [{ label: "Find Aircon Specialist →", action: () => nav("all-categories") }];
+          "Need painting, pest control, or moving assistance? Ate Grace, Kuya Christian, and Kuya Paolo are verified local specialists in San Pablo City.";
+        buttons = [{ label: "View Specialists →", action: () => nav("all-categories") }];
       } else if (lower.includes("pay") || lower.includes("cash") || lower.includes("price") || lower.includes("rate") || lower.includes("magkano")) {
         botReply =
           "TapServe uses direct Cash Payment upon job completion. Provider rates start from ₱250–₱380 per hour depending on the service specialization.";

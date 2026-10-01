@@ -111,10 +111,18 @@ export function BookingCompletedScreen({
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-4">
         {/* Celebration / Status Card */}
-        <div className="bg-white border border-[#ccfbf1] rounded-3xl p-5 flex flex-col items-center text-center shadow-xs relative overflow-hidden scale-in">
+        <div className="bg-white border border-[#ccfbf1] rounded-3xl p-5 flex flex-col items-center text-center shadow-xs relative overflow-hidden scale-in shrink-0">
           <div className="absolute -right-6 -top-6 size-24 bg-[#ccfbf1]/40 rounded-full blur-xl pointer-events-none" />
-          <div className="bg-[#dcfce7] border-2 border-[#86efac] text-[#15803d] rounded-full size-16 flex items-center justify-center text-3xl shadow-sm mb-3">
-            ✓
+          <div className="bg-[#dcfce7] border-2 border-[#86efac] text-[#15803d] rounded-full size-16 flex items-center justify-center shadow-sm mb-3 shrink-0">
+            <svg
+              className="size-8 text-[#15803d]"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={3}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
           </div>
           <span className="text-[#15803d] text-xs font-bold uppercase tracking-wider bg-[#dcfce7] px-3 py-1 rounded-full mb-1">
             Service Completed
@@ -136,7 +144,7 @@ export function BookingCompletedScreen({
         </div>
 
         {/* Provider Profile Summary */}
-        <div className="bg-white border border-[#e2e8f0] rounded-3xl p-4 flex items-center justify-between shadow-xs">
+        <div className="bg-white border border-[#e2e8f0] rounded-3xl p-4 flex items-center justify-between shadow-xs shrink-0">
           <div className="flex items-center gap-3.5 min-w-0">
             <img
               src={booking.providerPhoto}
@@ -148,7 +156,12 @@ export function BookingCompletedScreen({
                 <span className="text-[#0f172a] text-sm font-bold truncate">
                   {booking.providerName}
                 </span>
-                <span className="text-[#0d9488] text-[11px]">✓</span>
+                <span className="bg-[#ccfbf1] text-[#0f766e] text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5 shrink-0">
+                  <svg className="size-3 text-[#0f766e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Verified
+                </span>
               </div>
               <span className="text-[#64748b] text-xs truncate">
                 {booking.serviceCategory} Specialist
@@ -185,7 +198,7 @@ export function BookingCompletedScreen({
         </div>
 
         {/* Location & Problem Summary */}
-        <div className="bg-white border border-[#e2e8f0] rounded-3xl p-4 flex flex-col gap-2.5 shadow-xs text-xs">
+        <div className="bg-white border border-[#e2e8f0] rounded-3xl p-4 flex flex-col gap-2.5 shadow-xs text-xs shrink-0">
           <span className="text-[#0f172a] font-bold uppercase tracking-wider text-[11px]">
             Service Information
           </span>
@@ -206,13 +219,15 @@ export function BookingCompletedScreen({
             </div>
           )}
           <div className="bg-[#f0fdfa] border border-[#ccfbf1] p-2.5 rounded-xl flex items-center gap-2 text-[#0f766e] text-[11px] font-medium mt-1">
-            <span>🛡️</span>
-            <span>Protected by TapServe 30-Day Workmanship Guarantee.</span>
+            <svg className="size-3.5 text-[#0d9488] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Verified service completion in San Pablo City.</span>
           </div>
         </div>
 
         {/* Payment Summary */}
-        <div className="bg-white border border-[#e2e8f0] rounded-3xl p-4 flex flex-col gap-2 shadow-xs text-xs">
+        <div className="bg-white border border-[#e2e8f0] rounded-3xl p-4 flex flex-col gap-2 shadow-xs text-xs shrink-0">
           <div className="flex items-center justify-between pb-1 border-b border-[#f1f5f9]">
             <span className="text-[#0f172a] font-bold uppercase tracking-wider text-[11px]">
               Payment Summary
@@ -227,8 +242,8 @@ export function BookingCompletedScreen({
             <span className="font-medium text-[#0f172a]">₱{booking.estimatedCost}.00</span>
           </div>
           <div className="flex items-center justify-between text-[#64748b]">
-            <span>Platform Service Fee</span>
-            <span className="font-medium text-[#16a34a]">₱0.00 (Free)</span>
+            <span>Payment Settlement</span>
+            <span className="font-medium text-[#0f766e]">Direct Cash on Service</span>
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-[#f1f5f9] text-sm font-bold">
             <span className="text-[#0f172a]">Total Cash Collected:</span>
@@ -243,7 +258,7 @@ export function BookingCompletedScreen({
         </div>
 
         {/* Rating & Review Section */}
-        <div className="bg-white border border-[#e2e8f0] rounded-3xl p-5 flex flex-col gap-3 shadow-xs">
+        <div className="bg-white border border-[#e2e8f0] rounded-3xl p-5 flex flex-col gap-3 shadow-xs shrink-0">
           <div className="flex items-center justify-between">
             <span className="text-[#0f172a] font-bold text-xs uppercase tracking-wider">
               {isReviewed ? "Your Review & Rating" : "Rate Specialist"}
@@ -328,7 +343,7 @@ export function BookingCompletedScreen({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col gap-2.5 pt-1 pb-4">
+        <div className="flex flex-col gap-2.5 pt-1 pb-4 shrink-0">
           <button
             onClick={handleBookAgain}
             className="bg-[#0d9488] text-white text-sm font-bold py-3.5 rounded-2xl shadow-md active:brightness-90 touch-manipulation flex items-center justify-center gap-2 cursor-pointer"
@@ -397,14 +412,14 @@ export function BookingCompletedScreen({
             </div>
 
             {/* Price Box */}
-            <div className="bg-[#f8fafc] border border-[#e2e8f0] p-3 rounded-2xl flex flex-col gap-1 text-xs">
+            <div className="bg-[#f8fafc] border border-[#e2e8f0] p-3 rounded-2xl flex flex-col gap-1.5 text-xs">
               <div className="flex justify-between text-[#64748b]">
-                <span>Base Service:</span>
-                <span>₱{booking.estimatedCost}.00</span>
+                <span>Service Labor & Materials:</span>
+                <span className="font-medium text-[#0f172a]">₱{booking.estimatedCost}.00</span>
               </div>
               <div className="flex justify-between text-[#64748b]">
-                <span>Service Warranty Fee:</span>
-                <span className="text-[#16a34a]">₱0.00 (Waived)</span>
+                <span>Payment Settlement:</span>
+                <span className="font-semibold text-[#0f766e]">Direct Cash on Service</span>
               </div>
               <div className="flex justify-between font-bold text-sm text-[#0f172a] pt-1.5 border-t border-[#e2e8f0]">
                 <span>Total Amount Paid:</span>

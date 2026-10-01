@@ -69,7 +69,9 @@ const CATEGORY_SKILLS_MAP: Record<string, string[]> = {
   "Deep Cleaning": ["Post-Construction Cleaning", "Move-In Sanitization", "Mattress & Sofa Extraction", "Grease Trap Cleaning"],
   "Plumbing": ["Pipe Leak Repair", "Drain & Sink Unclogging", "Faucet & Shower Install", "Toilet Tank Repair", "Water Pump Maintenance"],
   "Electrical Services": ["Breaker & Wiring Repair", "Lighting & Outlet Install", "Short Circuit Troubleshooting", "Ceiling Fan Setup"],
-  "Aircon Cleaning": ["Split-Type Chemical Wash", "Window-Type Cleaning", "Freon Leak Diagnostics", "Filter Replacement"],
+  "Painting": ["Interior Wall Painting", "Exterior Weatherproofing", "Primer & Skim Coating", "Wood & Metal Enamel Coating"],
+  "Pest Control": ["Termite Barrier Treatment", "Household Insect Elimination", "Rodent Baiting & Exclusion", "Preventative Chemical Barrier"],
+  "Moving Assistance": ["Furniture Packing & Wrapping", "Heavy Appliance Lifting", "Loading & Unloading Assist", "Careful Transit Handling"],
   "Appliance Repair": ["Refrigerator Diagnostics", "Washing Machine Repair", "Microwave & Oven Fix", "Water Dispenser Service"],
   "Carpentry": ["Cabinet Repair & Assembly", "Door Lock & Hinge Fitting", "Wood Furniture Restoration", "Ceiling Partition"],
   "Home Maintenance": ["Minor Painting Touchups", "Roof Sealant / Gutter Repair", "Pressure Washing", "Door & Screen Mesh Repair"],
@@ -229,7 +231,7 @@ export function ProviderApplyScreen({
       selectedCategories.forEach((cat) => {
         if (!updated[cat]) {
           const defaultPrice =
-            cat.includes("Deep") ? 800 : cat.includes("Plumbing") ? 650 : cat.includes("Electrical") ? 750 : cat.includes("Aircon") ? 600 : 500;
+            cat.includes("Deep") ? 800 : cat.includes("Plumbing") ? 650 : cat.includes("Electrical") ? 750 : cat.includes("Pest") ? 700 : cat.includes("Painting") ? 600 : 500;
           updated[cat] = { price: defaultPrice, type: "Starting From" };
         }
       });
@@ -1081,7 +1083,9 @@ export function ProviderApplyScreen({
                 { name: "Deep Cleaning", icon: "✨", desc: "Intensive disinfection & wash" },
                 { name: "Plumbing", icon: "🔧", desc: "Pipe leaks, drains & sanitary" },
                 { name: "Electrical Services", icon: "⚡", desc: "Wiring, breakers & fixtures" },
-                { name: "Aircon Cleaning", icon: "❄️", desc: "Chemical wash & maintenance" },
+                { name: "Painting", icon: "🖌️", desc: "Interior, exterior & wood stain" },
+                { name: "Pest Control", icon: "🐛", desc: "Termite, rodent & insect care" },
+                { name: "Moving Assistance", icon: "📦", desc: "Packing, loading & relocation" },
                 { name: "Appliance Repair", icon: "🔌", desc: "Refrigerators, washers & stoves" },
                 { name: "Carpentry", icon: "🪚", desc: "Furniture, cabinets & doors" },
                 { name: "Home Maintenance", icon: "🏠", desc: "Repairs, touchups & painting" },
@@ -1687,7 +1691,7 @@ export function ProviderApplyScreen({
                 </div>
                 {(selectedCategories.includes("Electrical Services") ||
                   selectedCategories.includes("Plumbing") ||
-                  selectedCategories.includes("Aircon Cleaning")) && (
+                  selectedCategories.includes("Pest Control")) && (
                   <span className="text-[9px] bg-amber-100 text-amber-900 font-extrabold px-2 py-0.5 rounded-full">
                     Recommended for your trades
                   </span>

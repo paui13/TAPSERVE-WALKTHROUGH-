@@ -174,7 +174,6 @@ export function HomeScreen({
       electrical: { desc: "Breakers, lights & circuits", defaultTag: "Fast Response" },
       gardening: { desc: "Lawn trimming & landscape care", defaultTag: "Popular" },
       "appliance-repair": { desc: "Refrigerators, washers & fans", defaultTag: "Fast Response" },
-      aircon: { desc: "Filter, coil & coolant check", defaultTag: "Top Rated" },
       carpentry: { desc: "Doors, cabinets & repairs", defaultTag: "Available" },
       "home-maintenance": { desc: "Roof leak sealing & gutters", defaultTag: "Seasonal" },
       painting: { desc: "Interior & exterior wall paint", defaultTag: "Popular" },
@@ -484,11 +483,11 @@ export function HomeScreen({
                 </svg>
               </div>
               <span className="text-[#0f766e] text-[11px] font-semibold truncate">
-                Verified specialists • Ratings & reviews • Secure cash booking
+                Verified specialists • Ratings & reviews • Direct cash on service
               </span>
             </div>
             <span className="text-[10px] font-extrabold text-[#0d9488] bg-[#ccfbf1] px-2 py-0.5 rounded-full shrink-0 ml-1">
-              100% Safe
+              Verified
             </span>
           </div>
         </div>

@@ -145,8 +145,10 @@ export function ProviderProfileScreen({
             <div className="flex flex-col gap-2">
               {provider.services.map((svc) => (
                 <div key={svc} className="flex items-center gap-2 text-xs text-[#0f172a]">
-                  <div className="size-4 rounded-full bg-[#ccfbf1] text-[#0f766e] flex items-center justify-center text-[10px] font-bold">
-                    ✓
+                  <div className="size-4 rounded-full bg-[#ccfbf1] text-[#0f766e] flex items-center justify-center shrink-0">
+                    <svg className="size-2.5 text-[#0f766e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
                   </div>
                   <span>{svc}</span>
                 </div>
@@ -436,8 +438,10 @@ export function BookingScreen({
                 >
                   <span>{svc}</span>
                   {selectedService === svc && (
-                    <span className="size-4 rounded-full bg-[#0d9488] text-white flex items-center justify-center text-[10px]">
-                      ✓
+                    <span className="size-4 rounded-full bg-[#0d9488] text-white flex items-center justify-center shrink-0">
+                      <svg className="size-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
                     </span>
                   )}
                 </button>
@@ -1035,13 +1039,25 @@ export function TrackingScreen({
         </div>
       </div>
 
-      {/* Animated map markers */}
-      <div className="absolute left-[62%] top-[40%] z-10">
+      {/* Simulated GPS Navigation Route along Ring Road */}
+      <svg className="absolute inset-0 size-full pointer-events-none z-10" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path
+          d="M 16 43 Q 11 32, 22 21"
+          fill="none"
+          stroke="#0D9488"
+          strokeWidth="1"
+          strokeDasharray="2.5,2.5"
+          strokeLinecap="round"
+        />
+      </svg>
+
+      {/* Animated map markers (Positioned on San Pablo City streets, NOT in the lake) */}
+      <div className="absolute left-[22%] top-[17%] z-10">
         <div className="bg-white border-2 border-[#0d9488] shadow-md flex items-center justify-center rounded-2xl size-10">
           <span className="text-lg">🏠</span>
         </div>
       </div>
-      <div className="absolute left-[32%] top-[50%] z-10 animate-pulse">
+      <div className="absolute left-[11%] top-[39%] z-10 animate-pulse">
         <div className="bg-[#0d9488] border-2 border-white shadow-lg flex items-center justify-center rounded-2xl size-11">
           <span className="text-lg">🛵</span>
         </div>
@@ -1095,7 +1111,9 @@ export function TrackingScreen({
           }}
           className="w-full bg-[#15803d] hover:bg-[#166534] text-white text-xs font-bold py-3 rounded-xl shadow-xs active:scale-[0.98] transition-all touch-manipulation flex items-center justify-center gap-2 cursor-pointer mt-0.5"
         >
-          <span>✓</span> Complete Service & Settle Cash
+          <svg className="size-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg> Complete Service & Settle Cash
         </button>
 
         <div className="flex gap-2">

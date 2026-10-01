@@ -1933,10 +1933,10 @@ function ProviderProfileView({
             <span className="text-xs text-[#0F766E] font-semibold">{provider.specialization}</span>
             <div className="flex items-center gap-2 text-xs text-[#6B7280] mt-1">
               <span className="text-amber-500 font-bold flex items-center gap-0.5">
-                <span>⭐</span> {provider.rating}
+                <span>⭐</span> {provider.rating || 4.9}
               </span>
               <span>•</span>
-              <span>{provider.completedJobs || 120} completed jobs</span>
+              <span>{provider.completedJobs || 142} completed jobs</span>
             </div>
           </div>
         </div>
@@ -2038,7 +2038,7 @@ function ProviderProfileView({
           { label: "Availability & Vacation Mode", icon: "📅", sub: vacationMode ? "Vacation Active" : "8:00 AM - 5:00 PM", action: () => onOpenSubView("availability") },
           { label: "Service Area Coverage", icon: "📍", sub: "San Pablo City & nearby", action: () => onOpenSubView("areas") },
           { label: "Earnings & Payouts", icon: "💰", sub: "₱12,450 available", action: () => onOpenSubView("earnings") },
-          { label: "Ratings & Client Reviews", icon: "⭐", sub: "4.8 based on 120 reviews", action: () => onOpenSubView("reviews") },
+          { label: "Ratings & Client Reviews", icon: "⭐", sub: `${provider.rating || 4.9} based on ${provider.reviewCount || 142} reviews`, action: () => onOpenSubView("reviews") },
           { label: "Performance & Quality Metrics", icon: "📈", sub: "96% completion rate", action: () => onOpenSubView("performance") },
           { label: "Documents & Verification", icon: "📑", sub: "Government ID, TESDA verified", action: () => onOpenSubView("verification") },
           { label: "Account Standing", icon: "🛡️", sub: "Good Standing (0 points)", action: () => onOpenSubView("standing") },
@@ -2983,9 +2983,9 @@ function ProviderReviewsModal({
           {/* Rating Breakdown Card */}
           <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 flex items-center gap-4 shadow-2xs">
             <div className="flex flex-col items-center justify-center border-r border-[#E5E7EB] pr-4 shrink-0">
-              <span className="text-3xl font-black text-[#1F2937]">4.8</span>
+              <span className="text-3xl font-black text-[#1F2937]">{provider.rating || 4.9}</span>
               <div className="flex text-amber-500 text-xs my-0.5">★★★★★</div>
-              <span className="text-[10px] text-[#6B7280]">120 reviews</span>
+              <span className="text-[10px] text-[#6B7280]">{provider.reviewCount || 142} reviews</span>
             </div>
 
             <div className="flex-1 flex flex-col gap-1 text-[10px]">
@@ -3073,8 +3073,8 @@ function ProviderPerformanceModal({
 
           <div className="grid grid-cols-2 gap-2.5">
             {[
-              { label: "Community Rating", val: "4.8 / 5.0", target: "Target: >4.5 ★", ok: true },
-              { label: "Completed Bookings", val: "120 jobs", target: "Top 5% in San Pablo", ok: true },
+              { label: "Community Rating", val: `${provider.rating || 4.9} / 5.0`, target: "Target: >4.5 ★", ok: true },
+              { label: "Completed Bookings", val: `${provider.completedJobs || 142} jobs`, target: "Top 5% in San Pablo", ok: true },
               { label: "Completion Rate", val: "96%", target: "Target: >90%", ok: true },
               { label: "Cancellation Rate", val: "2%", target: "Target: <5%", ok: true },
               { label: "Response Rate", val: "98%", target: "Target: >95%", ok: true },
@@ -4131,7 +4131,7 @@ function ProviderSubscriptionReceiptModal({
             </div>
             <div className="flex justify-between">
               <span className="text-[#64748B]">Date & Time:</span>
-              <span className="font-semibold text-[#0F172A]">Oct 15, 2026 • 10:24 AM</span>
+              <span className="font-semibold text-[#0F172A]">Oct 12, 2026 • 10:24 AM</span>
             </div>
             <div className="flex justify-between">
               <span className="text-[#64748B]">Specialist Name:</span>
@@ -4181,7 +4181,7 @@ function ProviderSubscriptionReceiptModal({
           <div className="bg-white border border-[#E2E8F0] p-2.5 rounded-xl flex items-center justify-between text-[10px] font-sans">
             <span className="text-[#64748B]">Accreditation Valid Until:</span>
             <span className="font-bold text-[#115E59]">
-              {isYearly ? "Oct 15, 2027 (1 Year)" : "Nov 15, 2026 (30 Days)"}
+              {isYearly ? "Oct 12, 2027 (1 Year)" : "Nov 12, 2026 (30 Days)"}
             </span>
           </div>
 
